@@ -1,5 +1,5 @@
-// seedingVoters.js
 const mongoose = require('mongoose');
+const Voter = require('./models/Voters'); // Adjust the path as needed
 
 // Replace with your MongoDB connection URI
 const uri = 'mongodb://localhost:27017/collectionsListForVoters';
@@ -16,21 +16,21 @@ const seedVotersData = async () => {
         {
           voterId: 'voter123',
           voterName: 'John Doe',
-          password: 'password123',
+          password: 'password123', // Store passwords securely in a real project
           address: '123 Main St',
           age: 30
         },
         {
           voterId: 'voter456',
           voterName: 'Jane Smith',
-          password: 'password456',
+          password: 'password456', // Store passwords securely in a real project
           address: '456 Oak Ave',
           age: 25
         },
         {
           voterId: 'voter789',
           voterName: 'David Johnson',
-          password: 'password789',
+          password: 'password789', // Store passwords securely in a real project
           address: '789 Pine Rd',
           age: 45
         }
@@ -38,25 +38,8 @@ const seedVotersData = async () => {
     }
   ];
 
-  // Define the Voter schema with the 'listname' and 'voters' array
-  const voterSchema = new mongoose.Schema({
-    listname: { type: String, required: true },
-    voters: [
-      {
-        voterId: { type: String, required: true },
-        voterName: { type: String, required: true },
-        password: { type: String, required: true },
-        address: { type: String, required: true },
-        age: { type: Number, required: true }
-      }
-    ]
-  });
-
-  // Create the Voter model
-  const VoterModel = mongoose.model('Voter', voterSchema);
-
   try {
-    await VoterModel.insertMany(voters);
+    await Voter.insertMany(voters);
     console.log('Voters inserted successfully');
   } catch (error) {
     console.error('Error inserting voter data:', error);

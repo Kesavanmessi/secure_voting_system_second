@@ -28,27 +28,35 @@ function CreateElection() {
     }
   };
 
-  // Step 2: Fetch Voters Based on Voter List Collection Name
-  const fetchVoters = async () => {
+  // Step 2: Verify if Voter List Exists in the voters database
+  const verifyVoterList = async () => {
     try {
-      const response = await axios.post(`http://localhost:5000/api/voters/list`, { voterListName });
-      setMessage(`Voter list "${voterListName}" added successfully.`);
-      setStep(3);  // Move to Step 3
+      const response = await axios.post('http://localhost:5000/api/elections/voters/check-list', { voterListName });
+      if (response.data.exists) {
+        setMessage(`Voter list "${voterListName}" verified successfully.`);
+        setStep(3);  // Move to Step 3
+      } else {
+        setMessage("No voter list found with this name.");
+      }
     } catch (error) {
-      console.error("Error fetching voters:", error);
-      setMessage("Error fetching voters. Please try again.");
+      console.error("Error verifying voter list:", error);
+      setMessage("Error verifying voter list. Please try again.");
     }
   };
 
-  // Step 3: Fetch Candidates Based on Candidate List Collection Name
-  const fetchCandidates = async () => {
+  // Step 3: Verify if Candidate List Exists in the candidates database
+  const verifyCandidateList = async () => {
     try {
-      const response = await axios.post(`http://localhost:5000/api/candidates/list`, { candidateListName });
-      setMessage(`Candidate list "${candidateListName}" added successfully.`);
-      setStep(4);  // Move to Step 4
+      const response = await axios.post('http://localhost:5000/api/elections/candidates/check-list', { candidateListName });
+      if (response.data.exists) {
+        setMessage(`Candidate list "${candidateListName}" verified successfully.`);
+        setStep(4);  // Move to Step 4
+      } else {
+        setMessage("No candidate list found with this name.");
+      }
     } catch (error) {
-      console.error("Error fetching candidates:", error);
-      setMessage("Error fetching candidates. Please try again.");
+      console.error("Error verifying candidate list:", error);
+      setMessage("Error verifying candidate list. Please try again.");
     }
   };
 
@@ -111,7 +119,7 @@ function CreateElection() {
           </div>
         )}
 
-        {/* Step 2: Enter Voter List Name */}
+        {/* Step 2: Verify Voter List */}
         {step === 2 && (
           <div className="mb-5">
             <label htmlFor="voter-list" className="text-lg">Voter List Collection Name:</label>
@@ -123,13 +131,13 @@ function CreateElection() {
               onChange={(e) => setVoterListName(e.target.value)}
               required
             />
-            <button type="button" onClick={fetchVoters} className="mt-3 bg-blue-500 p-2 rounded-lg w-full">
-              Add Voter List
+            <button type="button" onClick={verifyVoterList} className="mt-3 bg-blue-500 p-2 rounded-lg w-full">
+              Verify Voter List
             </button>
           </div>
         )}
 
-        {/* Step 3: Enter Candidate List Name */}
+        {/* Step 3: Verify Candidate List */}
         {step === 3 && (
           <div className="mb-5">
             <label htmlFor="candidate-list" className="text-lg">Candidate List Collection Name:</label>
@@ -141,8 +149,8 @@ function CreateElection() {
               onChange={(e) => setCandidateListName(e.target.value)}
               required
             />
-            <button type="button" onClick={fetchCandidates} className="mt-3 bg-blue-500 p-2 rounded-lg w-full">
-              Add Candidate List
+            <button type="button" onClick={verifyCandidateList} className="mt-3 bg-blue-500 p-2 rounded-lg w-full">
+              Verify Candidate List
             </button>
           </div>
         )}

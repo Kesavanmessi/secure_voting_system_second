@@ -8,17 +8,17 @@ const ElectionSchema = new mongoose.Schema({
     unique: true
   },
   createdBy: {
-    type: mongoose.Schema.Types.ObjectId,  // Assuming this refers to an Admin user ID
-    ref: 'Admin',
+      // Assuming this refers to an Admin user ID
+    type: String,
     required: true
   },
   voters: {
-    type: [String],  // List of voter IDs or names depending on your implementation
-    default: []
+    type: String,  // List of voter IDs or names depending on your implementation
+    required: true
   },
   candidates: {
-    type: [String],  // List of candidate IDs or names
-    default: []
+    type: String,  // List of candidate IDs or names
+    required: true
   },
   startTime: {
     type: Date,
