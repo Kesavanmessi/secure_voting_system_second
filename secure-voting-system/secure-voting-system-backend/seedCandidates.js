@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const Candidate = require('./models/Candidates'); // Adjust the path as needed
 
 // Replace with your MongoDB connection URI
-const uri = 'mongodb://localhost:27017/collectionsListForCandidates';
+const uri = 'mongodb://localhost:27017/secureVotingDB';
 
 mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('MongoDB connected for Candidates'))

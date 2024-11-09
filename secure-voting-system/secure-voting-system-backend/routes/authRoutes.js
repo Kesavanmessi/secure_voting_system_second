@@ -16,7 +16,7 @@ router.post('/verify-name', async (req, res) => {
     const existingElection = await Election.findOne({ electionName });
 
     // Respond with whether the election name exists
-    res.json({ exists: !existingElection });  // true if exists, false if not
+    res.json({ exists: !!existingElection });  // true if exists, false if not
   } catch (error) {
     console.error('Error verifying election name:', error);
     res.status(500).json({ message: 'Server error verifying election name' });
@@ -41,6 +41,7 @@ router.post('/voters/check-list', async (req, res) => {
     res.status(500).json({ message: 'Server error verifying voter list' });
   }
 });
+
 
 router.post('/candidates/check-list', async (req, res) => {
   const { candidateListName } = req.body;

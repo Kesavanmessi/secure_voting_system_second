@@ -33,14 +33,14 @@ function CreateElection() {
     try {
       const response = await axios.post('http://localhost:5000/api/elections/voters/check-list', { voterListName });
       if (response.data.exists) {
-        setMessage(`Voter list "${voterListName}" verified successfully.`);
+        setMessage(`Voter list "${voterListName}" added successfully.`);
         setStep(3);  // Move to Step 3
       } else {
-        setMessage("No voter list found with this name.");
+        setMessage(`No voter list found with the name "${voterListName}".`);
       }
     } catch (error) {
-      console.error("Error verifying voter list:", error);
-      setMessage("Error verifying voter list. Please try again.");
+      console.error("Error fetching voters:", error);
+      setMessage("Error fetching voters. Please try again.");
     }
   };
 
