@@ -101,4 +101,25 @@ router.post('/create', async (req, res) => {
   }
 });
 
+
+router.get('/fetching', async (req, res) => {
+  try {
+    const elections = await Election.find({}, 'electionName'); // Only fetch the 'electionName' field
+    res.json(elections);
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching election names' });
+  }
+});
+
+router.delete('/trash', async (req, res) => {
+  try {
+    const { id } = req.query;
+    await Election.findByIdAndDelete(id);
+    res.status(200).json({ message: 'Election deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting election' });
+  }
+});
+
+
 module.exports = router;

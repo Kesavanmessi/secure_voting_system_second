@@ -9,7 +9,7 @@ function ManageElection() {
 
   // Fetch elections from the backend
   useEffect(() => {
-    axios.get('/api/elections')  // Adjust the URL to your backend endpoint
+    axios.get('http://localhost:5000/api/elections/fetching')  // Adjust the URL to your backend endpoint
       .then((response) => {
         setElections(response.data);
         setLoading(false);
@@ -20,12 +20,22 @@ function ManageElection() {
       });
   }, []);
 
-  const handleDelete = (id) => {
-    // Here, you would call an API to delete the election
-    // After deletion, you can update the state to remove the deleted election
-    const updatedElections = elections.filter(election => election.id !== id);
-    setElections(updatedElections);
+  const handleDelete = async (id, name) => {
+    const confirmation = prompt(`To confirm, type the name of the election: "${name}"`);
+    
+    if (confirmation === name) {
+      try {
+        await axios.delete(`http://localhost:5000/api/elections/trash`, { params: { id } });
+        setElections(elections.filter(election => election._id !== id));
+        alert(`${name} has been deleted successfully.`);
+      } catch (error) {
+        console.error("Error deleting election:", error);
+      }
+    } else {
+      alert("Deletion cancelled or incorrect election name entered.");
+    }
   };
+  
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col justify-center items-center p-10">
@@ -48,7 +58,7 @@ function ManageElection() {
             <tbody>
               {elections.map((election) => (
                 <tr key={election._id} className="border-b border-gray-600">
-                  <td className="p-4">{election.name}</td>
+                  <td className="p-4">{election.electionName}</td>
                   <td className="p-4 flex justify-center gap-4">
                     <Link
                       to={`/admin-dashboard/manage-election/${election._id}`} // Route to manage single election
@@ -57,7 +67,7 @@ function ManageElection() {
                       Manage
                     </Link>
                     <button
-                      onClick={() => handleDelete(election._id)}
+                      onClick={() => handleDelete(election._id, election.electionName)}
                       className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-400 flex items-center"
                     >
                       <i className="fas fa-trash-alt mr-2"></i> Trash
