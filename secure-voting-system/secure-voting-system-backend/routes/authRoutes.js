@@ -121,5 +121,115 @@ router.delete('/trash', async (req, res) => {
   }
 });
 
+// Get election details by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const election = await Election.findById(req.params.id);
+    if (!election) {
+      return res.status(404).json({ message: 'Election not found' });
+    }
+    res.json(election);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching election details' });
+  }
+});
+
+// Update election details by ID
+router.put('/:id', async (req, res) => {
+  const { electionName, startTime, endTime, voters, candidates } = req.body;
+
+  try {
+    const updatedElection = await Election.findByIdAndUpdate(
+      req.params.id,
+      { electionName, startTime, endTime, voterLists : voters, candidateLists : candidates },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedElection) {
+      return res.status(404).json({ message: 'Election not found' });
+    }
+
+    res.json({ success: true, message: 'Election updated successfully', updatedElection });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating election' });
+  }
+});
+
+//deleting particlar voter list or candidate list from election
+
+// Delete list entry from election
+router.delete('/:id/list', async (req, res) => {
+  const { listName, listType } = req.body;
+
+  try {
+    const updateQuery = listType === 'voterLists'
+      ? { $pull: { voterLists: listName } }
+      : { $pull: { candidateLists: listName } };
+
+    const updatedElection = await Election.findByIdAndUpdate(req.params.id, updateQuery, { new: true });
+
+    if (!updatedElection) {
+      return res.status(404).json({ message: 'Election not found' });
+    }
+
+    res.json({ success: true, message: `${listType} entry removed successfully`, updatedElection });
+  } catch (error) {
+    res.status(500).json({ message: 'Error removing entry from election' });
+  }
+});
+
+
+// Endpoint to check if a voter exists in the Voter collection
+router.get('/searchvoterLists/:voterName', async (req, res) => {
+  const { voterName } = req.params;
+
+  try {
+    // Search for the voter in the Voter collection by listname
+    const voter = await Voter.findOne({ listname: voterName });
+
+    // Check if voter was found
+    if (voter) {
+      return res.status(200).json({
+        message: `Voter "${voterName}" found in the Voter collection.`,
+        exists: true,
+        voter
+      });
+    } else {
+      return res.status(200).json({
+        message: `Voter "${voterName}" not found in the Voter collection.`,
+        exists: false
+      });
+    }
+  } catch (error) {
+    console.error('Error searching for voter:', error);
+    res.status(500).json({ message: 'Internal server error. Please try again later.' });
+  }
+});
+
+
+router.get('/searchCandidateLists/:candidateName', async (req, res) => {
+  const { candidateName } = req.params;
+
+  try {
+    // Search for the candidate in the Candidate collection
+    const candidate = await Candidate.findOne({ listname: candidateName });
+    if (candidate) {
+      return res.status(200).json({
+        message: `Candidate "${candidateName}" found in the Candidate collection.`,
+        exists: true,
+        candidate
+      });
+    } else {
+      return res.status(200).json({
+        message: `Candidate "${candidateName}" not found in the Candidate collection.`,
+        exists: false
+      });
+    }
+  } catch (error) {
+    console.error('Error searching for candidate:', error);
+    res.status(500).json({ message: 'Internal server error. Please try again later.' });
+  }
+});
+
 
 module.exports = router;

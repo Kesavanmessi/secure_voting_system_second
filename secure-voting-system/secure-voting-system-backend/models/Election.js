@@ -1,4 +1,3 @@
-// models/Election.js
 const mongoose = require('mongoose');
 
 const ElectionSchema = new mongoose.Schema({
@@ -8,18 +7,17 @@ const ElectionSchema = new mongoose.Schema({
     unique: true
   },
   createdBy: {
-      // Assuming this refers to an Admin user ID
     type: String,
     required: true
   },
-  voters: {
-    type: String,  // List of voter IDs or names depending on your implementation
+  voterLists: [{  // Renamed from voters for clarity, if these are lists
+    type: String,
     required: true
-  },
-  candidates: {
-    type: String,  // List of candidate IDs or names
+  }],
+  candidateLists: [{  // Renamed from candidates for clarity, if these are lists
+    type: String,
     required: true
-  },
+  }],
   startTime: {
     type: Date,
     required: true

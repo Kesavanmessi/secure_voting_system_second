@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const Election = require('./models/Election'); // Adjust the path if needed
+const Election = require('./models/Election');
 
 // Replace with your MongoDB connection URI
 const uri = 'mongodb://localhost:27017/secureVotingDB';
@@ -13,8 +13,8 @@ const seedElectionData = async () => {
     {
       electionName: "General Election 2024",
       createdBy: "admin1",
-      voters: "General Election 2024", // Replace with actual voter IDs from your Voter collection
-      candidates: "General Election 2024", // Replace with actual candidate IDs from your Candidate collection
+      voterLists: ["General Election 2024"],  // Voter list names
+      candidateLists: ["General Election 2024"],  // Candidate list names
       startTime: new Date("2024-10-01T08:00:00"),
       endTime: new Date("2024-10-02T20:00:00"),
       isResultPublished: false
