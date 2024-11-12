@@ -10,6 +10,8 @@ function CreateElection() {
   const [endTime, setEndTime] = useState('');
   const [message, setMessage] = useState(null);
   const [step, setStep] = useState(1);  // Track current step
+  const [verifiedVoterLists, setVerifiedVoterLists] = useState([]);
+  const [verifiedCandidateLists, setVerifiedCandidateLists] = useState([]);
   const navigate = useNavigate();
 
   // Step 1: Verify if Election Name is Unique
@@ -28,37 +30,52 @@ function CreateElection() {
     }
   };
 
-  // Step 2: Verify if Voter List Exists in the voters database
-  const verifyVoterList = async () => {
-    try {
-      const response = await axios.post('http://localhost:5000/api/elections/voters/check-list', { voterListName });
-      if (response.data.exists) {
-        setMessage(`Voter list "${voterListName}" added successfully.`);
-        setStep(3);  // Move to Step 3
-      } else {
-        setMessage(`No voter list found with the name "${voterListName}".`);
-      }
-    } catch (error) {
-      console.error("Error fetching voters:", error);
-      setMessage("Error fetching voters. Please try again.");
-    }
-  };
+  // Step 2: Verify if Voter List Exists and Add to List
+const verifyVoterList = async () => {
+  // Check if the voter list is already in the verified list
+  if (verifiedVoterLists.includes(voterListName)) {
+    setMessage(`Voter list "${voterListName}" is already added.`);
+    return;
+  }
 
-  // Step 3: Verify if Candidate List Exists in the candidates database
-  const verifyCandidateList = async () => {
-    try {
-      const response = await axios.post('http://localhost:5000/api/elections/candidates/check-list', { candidateListName });
-      if (response.data.exists) {
-        setMessage(`Candidate list "${candidateListName}" verified successfully.`);
-        setStep(4);  // Move to Step 4
-      } else {
-        setMessage("No candidate list found with this name.");
-      }
-    } catch (error) {
-      console.error("Error verifying candidate list:", error);
-      setMessage("Error verifying candidate list. Please try again.");
+  try {
+    const response = await axios.post('http://localhost:5000/api/elections/voters/check-list', { voterListName });
+    if (response.data.exists) {
+      setVerifiedVoterLists((prev) => [...prev, voterListName]);
+      setMessage(`Voter list "${voterListName}" added successfully.`);
+      setVoterListName('');  // Clear input after adding
+    } else {
+      setMessage(`No voter list found with the name "${voterListName}".`);
     }
-  };
+  } catch (error) {
+    console.error("Error verifying voter list:", error);
+    setMessage("Error verifying voter list. Please try again.");
+  }
+};
+
+// Step 3: Verify if Candidate List Exists and Add to List
+const verifyCandidateList = async () => {
+  // Check if the candidate list is already in the verified list
+  if (verifiedCandidateLists.includes(candidateListName)) {
+    setMessage(`Candidate list "${candidateListName}" is already added.`);
+    return;
+  }
+
+  try {
+    const response = await axios.post('http://localhost:5000/api/elections/candidates/check-list', { candidateListName });
+    if (response.data.exists) {
+      setVerifiedCandidateLists((prev) => [...prev, candidateListName]);
+      setMessage(`Candidate list "${candidateListName}" added successfully.`);
+      setCandidateListName('');  // Clear input after adding
+    } else {
+      setMessage("No candidate list found with this name.");
+    }
+  } catch (error) {
+    console.error("Error verifying candidate list:", error);
+    setMessage("Error verifying candidate list. Please try again.");
+  }
+};
+
 
   // Step 4: Handle Final Submission and Time Validation
   const handleSubmit = async (e) => {
@@ -76,8 +93,8 @@ function CreateElection() {
       const response = await axios.post('http://localhost:5000/api/elections/create', {
         electionName,
         createdBy: 'admin1',  // Use dynamic admin ID if available
-        voterListName,
-        candidateListName,
+        voterLists: verifiedVoterLists,
+        candidateLists: verifiedCandidateLists,
         startTime,
         endTime
       });
@@ -119,40 +136,64 @@ function CreateElection() {
           </div>
         )}
 
-        {/* Step 2: Verify Voter List */}
+        {/* Step 2: Add Multiple Voter Lists */}
         {step === 2 && (
-          <div className="mb-5">
-            <label htmlFor="voter-list" className="text-lg">Voter List Collection Name:</label>
-            <input
-              id="voter-list"
-              type="text"
-              className="w-full mt-2 p-2 rounded-lg text-black"
-              value={voterListName}
-              onChange={(e) => setVoterListName(e.target.value)}
-              required
-            />
-            <button type="button" onClick={verifyVoterList} className="mt-3 bg-blue-500 p-2 rounded-lg w-full">
-              Verify Voter List
+          <>
+            <div className="mb-5">
+              <label htmlFor="voter-list" className="text-lg">Voter List Collection Name:</label>
+              <input
+                id="voter-list"
+                type="text"
+                className="w-full mt-2 p-2 rounded-lg text-black"
+                value={voterListName}
+                onChange={(e) => setVoterListName(e.target.value)}
+              />
+              <button type="button" onClick={verifyVoterList} className="mt-3 bg-blue-500 p-2 rounded-lg w-full">
+                Verify and Add Voter List
+              </button>
+            </div>
+            <div>
+              <h3 className="text-lg text-green-500">Verified Voter Lists:</h3>
+              <ul className="list-disc pl-5">
+                {verifiedVoterLists.map((list, index) => (
+                  <li key={index} className="text-white">{list}</li>
+                ))}
+              </ul>
+            </div>
+            <button type="button" onClick={() => setStep(3)} className="mt-5 bg-green-500 p-2 rounded-lg w-full" disabled={verifiedVoterLists.length === 0}>
+              Next Step
             </button>
-          </div>
+          </>
         )}
 
-        {/* Step 3: Verify Candidate List */}
+        {/* Step 3: Add Multiple Candidate Lists */}
         {step === 3 && (
-          <div className="mb-5">
-            <label htmlFor="candidate-list" className="text-lg">Candidate List Collection Name:</label>
-            <input
-              id="candidate-list"
-              type="text"
-              className="w-full mt-2 p-2 rounded-lg text-black"
-              value={candidateListName}
-              onChange={(e) => setCandidateListName(e.target.value)}
-              required
-            />
-            <button type="button" onClick={verifyCandidateList} className="mt-3 bg-blue-500 p-2 rounded-lg w-full">
-              Verify Candidate List
+          <>
+            <div className="mb-5">
+              <label htmlFor="candidate-list" className="text-lg">Candidate List Collection Name:</label>
+              <input
+                id="candidate-list"
+                type="text"
+                className="w-full mt-2 p-2 rounded-lg text-black"
+                value={candidateListName}
+                onChange={(e) => setCandidateListName(e.target.value)}
+              />
+              <button type="button" onClick={verifyCandidateList} className="mt-3 bg-blue-500 p-2 rounded-lg w-full">
+                Verify and Add Candidate List
+              </button>
+            </div>
+            <div>
+              <h3 className="text-lg text-green-500">Verified Candidate Lists:</h3>
+              <ul className="list-disc pl-5">
+                {verifiedCandidateLists.map((list, index) => (
+                  <li key={index} className="text-white">{list}</li>
+                ))}
+              </ul>
+            </div>
+            <button type="button" onClick={() => setStep(4)} className="mt-5 bg-green-500 p-2 rounded-lg w-full" disabled={verifiedCandidateLists.length === 0}>
+              Next Step
             </button>
-          </div>
+          </>
         )}
 
         {/* Step 4: Select Start and End Time */}
