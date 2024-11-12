@@ -266,14 +266,14 @@ function ManageSingleElection() {
         type="text"
         value={newVoter}
         onChange={(e) => setNewVoter(e.target.value)}
-        placeholder="Add new voter"
+        placeholder="Add new voter List"
         className="p-2 text-black rounded mr-2"
       />
       <button
         onClick={handleAddVoter}
         className="bg-green-500 text-white px-4 py-2 rounded"
       >
-        Add Voter
+        Add Voter List
       </button>
     </div>
   </div>
@@ -296,14 +296,14 @@ function ManageSingleElection() {
         type="text"
         value={newCandidate}
         onChange={(e) => setNewCandidate(e.target.value)}
-        placeholder="Add new candidate"
+        placeholder="Add new candidate List"
         className="p-2 text-black rounded mr-2"
       />
       <button
         onClick={handleAddCandidate}
         className="bg-green-500 text-white px-4 py-2 rounded"
       >
-        Add Candidate
+        Add Candidate List
       </button>
     </div>
   </div>

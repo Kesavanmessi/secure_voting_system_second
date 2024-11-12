@@ -11,6 +11,16 @@ const AdminSchema = new mongoose.Schema({
   password: {
     type: String,
     required: true
+  },
+  role: {
+    type: String,
+    required: true,
+    enum: ['Head Admin', 'Manager Admin', 'Support Admin'],
+    default: 'Support Admin'
+  },
+  permissions: {
+    type: [String], // Array of permissions, e.g., ["manageElections", "viewReports"]
+    default: []     // Default permissions, based on the role
   }
 });
 
@@ -25,6 +35,25 @@ AdminSchema.pre('save', async function(next) {
   } catch (error) {
     next(error);
   }
+});
+
+// Function to set default permissions based on role
+AdminSchema.pre('save', function(next) {
+  if (!this.isModified('role')) return next();
+
+  // Assign default permissions based on role
+  switch (this.role) {
+    case 'Head Admin':
+      this.permissions = ['manageElections', 'viewReports', 'manageAdmins', 'viewVoters'];
+      break;
+    case 'Manager Admin':
+      this.permissions = ['manageElections', 'viewReports'];
+      break;
+    case 'Support Admin':
+      this.permissions = ['viewReports'];
+      break;
+  }
+  next();
 });
 
 const Admin = mongoose.model('Admin', AdminSchema);

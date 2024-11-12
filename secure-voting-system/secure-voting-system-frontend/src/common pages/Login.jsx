@@ -30,7 +30,7 @@ function Login({ login }) {
 
       if (login === 'Admin') {
         // 1. Admin Login: Check if admin credentials match in the database
-        response = await axios.post('http://localhost:5000/api/auth/admin-login', { username, password });
+        response = await axios.post('http://localhost:5000/api/elections/admin-login', { username, password });
         if (response.data.success) {
           navigate('/admin-dashboard');
         } else {
@@ -39,7 +39,7 @@ function Login({ login }) {
 
       } else if (login === 'Voter') {
         // 2. Voter Login: Verify election and voter details
-        response = await axios.post('/api/auth/voter-login', { electionName, voterId: username, password });
+        response = await axios.post('http://localhost:5000/api/elections/voter-login', { electionName, voterId: username, password });
         
         if (response.data.success) {
           navigate('/voter-dashboard');
@@ -53,7 +53,7 @@ function Login({ login }) {
     }
 
     // Clear error message after 5 seconds
-    setTimeout(() => setErrorMessage(''), 5000);
+    setTimeout(() => setErrorMessage(''), 3000);
   };
 
   const togglePasswordVisibility = () => {
@@ -96,7 +96,7 @@ function Login({ login }) {
           />
           <br />
 
-          <label htmlFor="password" className="text-blue-400">Passwor:</label>
+          <label htmlFor="password" className="text-blue-400">Password:</label>
           <br />
           <div className="relative">
             <input
@@ -119,7 +119,7 @@ function Login({ login }) {
             type="submit"
             className="mt-4 p-2 bg-blue-500 text-white rounded-lg w-full"
           >
-            Logi
+            Login
           </button>
         </form>
       </div>
