@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import AuthContext from '../context/AuthContext';
 
 function CreateElection() {
   const [electionName, setElectionName] = useState('');
@@ -9,12 +10,12 @@ function CreateElection() {
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [message, setMessage] = useState(null);
-  const [step, setStep] = useState(1);  // Track current step
+  const [step, setStep] = useState(1);
   const [verifiedVoterLists, setVerifiedVoterLists] = useState([]);
   const [verifiedCandidateLists, setVerifiedCandidateLists] = useState([]);
+  const { admin } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // Step 1: Verify if Election Name is Unique
   const verifyElectionName = async () => {
     try {
       const response = await axios.post('http://localhost:5000/api/elections/verify-name', { electionName });
@@ -22,7 +23,7 @@ function CreateElection() {
         setMessage("An election with this name already exists.");
       } else {
         setMessage(null);
-        setStep(2); // Move to Step 2 after successful verification
+        setStep(2);
       }
     } catch (error) {
       console.error("Error verifying election name:", error);
@@ -30,57 +31,48 @@ function CreateElection() {
     }
   };
 
-  // Step 2: Verify if Voter List Exists and Add to List
-const verifyVoterList = async () => {
-  // Check if the voter list is already in the verified list
-  if (verifiedVoterLists.includes(voterListName)) {
-    setMessage(`Voter list "${voterListName}" is already added.`);
-    return;
-  }
-
-  try {
-    const response = await axios.post('http://localhost:5000/api/elections/voters/check-list', { voterListName });
-    if (response.data.exists) {
-      setVerifiedVoterLists((prev) => [...prev, voterListName]);
-      setMessage(`Voter list "${voterListName}" added successfully.`);
-      setVoterListName('');  // Clear input after adding
-    } else {
-      setMessage(`No voter list found with the name "${voterListName}".`);
+  const verifyVoterList = async () => {
+    if (verifiedVoterLists.includes(voterListName)) {
+      setMessage(`Voter list "${voterListName}" is already added.`);
+      return;
     }
-  } catch (error) {
-    console.error("Error verifying voter list:", error);
-    setMessage("Error verifying voter list. Please try again.");
-  }
-};
-
-// Step 3: Verify if Candidate List Exists and Add to List
-const verifyCandidateList = async () => {
-  // Check if the candidate list is already in the verified list
-  if (verifiedCandidateLists.includes(candidateListName)) {
-    setMessage(`Candidate list "${candidateListName}" is already added.`);
-    return;
-  }
-
-  try {
-    const response = await axios.post('http://localhost:5000/api/elections/candidates/check-list', { candidateListName });
-    if (response.data.exists) {
-      setVerifiedCandidateLists((prev) => [...prev, candidateListName]);
-      setMessage(`Candidate list "${candidateListName}" added successfully.`);
-      setCandidateListName('');  // Clear input after adding
-    } else {
-      setMessage("No candidate list found with this name.");
+    try {
+      const response = await axios.post('http://localhost:5000/api/elections/voters/check-list', { voterListName });
+      if (response.data.exists) {
+        setVerifiedVoterLists((prev) => [...prev, voterListName]);
+        setMessage(`Voter list "${voterListName}" added successfully.`);
+        setVoterListName('');
+      } else {
+        setMessage(`No voter list found with the name "${voterListName}".`);
+      }
+    } catch (error) {
+      console.error("Error verifying voter list:", error);
+      setMessage("Error verifying voter list. Please try again.");
     }
-  } catch (error) {
-    console.error("Error verifying candidate list:", error);
-    setMessage("Error verifying candidate list. Please try again.");
-  }
-};
+  };
 
+  const verifyCandidateList = async () => {
+    if (verifiedCandidateLists.includes(candidateListName)) {
+      setMessage(`Candidate list "${candidateListName}" is already added.`);
+      return;
+    }
+    try {
+      const response = await axios.post('http://localhost:5000/api/elections/candidates/check-list', { candidateListName });
+      if (response.data.exists) {
+        setVerifiedCandidateLists((prev) => [...prev, candidateListName]);
+        setMessage(`Candidate list "${candidateListName}" added successfully.`);
+        setCandidateListName('');
+      } else {
+        setMessage("No candidate list found with this name.");
+      }
+    } catch (error) {
+      console.error("Error verifying candidate list:", error);
+      setMessage("Error verifying candidate list. Please try again.");
+    }
+  };
 
-  // Step 4: Handle Final Submission and Time Validation
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     const start = new Date(startTime);
     const end = new Date(endTime);
 
@@ -89,17 +81,24 @@ const verifyCandidateList = async () => {
       return;
     }
 
-    try {
-      const response = await axios.post('http://localhost:5000/api/elections/create', {
-        electionName,
-        createdBy: 'admin1',  // Use dynamic admin ID if available
-        voterLists: verifiedVoterLists,
-        candidateLists: verifiedCandidateLists,
-        startTime,
-        endTime
-      });
+    const electionData = {
+      electionName,
+      createdBy: admin?.username || 'admin1',
+      voterLists: verifiedVoterLists,
+      candidateLists: verifiedCandidateLists,
+      startTime,
+      endTime,
+      approvedBy: admin?.role === 'Head Admin' ? admin?.username : null
+    };
 
-      setMessage(`Election "${electionName}" created successfully.`);
+    try {
+      const endpoint = admin?.role === 'Head Admin'
+        ? 'http://localhost:5000/api/elections/create'
+        : 'http://localhost:5000/api/elections/pending';
+
+      const response = await axios.post(endpoint, electionData);
+
+      setMessage(`Election "${electionName}" ${admin?.role === 'Head Admin' ? 'created' : 'submitted for approval'} successfully.`);
       setTimeout(() => navigate('/admin-dashboard'), 5000);
     } catch (error) {
       console.error("Error creating election:", error);
@@ -224,7 +223,7 @@ const verifyCandidateList = async () => {
             </div>
 
             <button type="submit" className="w-full bg-green-500 p-2 mt-5 rounded-lg">
-              Create Election
+              {admin?.role === 'Head Admin' ? 'Create Election' : 'Submit for Approval'}
             </button>
           </>
         )}

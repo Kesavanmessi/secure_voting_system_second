@@ -3,11 +3,14 @@ const mongoose = require('mongoose');
 const router = express.Router();
 const Admin = require('../models/Admin'); // Ensure paths are correct
 const Election = require('../models/Election');
+const PendingElection = require('../models/PendingElection')
+const PendingElectionForModifications = require('../models/PendingElectionForModifications')
 const Voter = require('../models/Voters');
 const Candidate = require('../models/Candidates');
 const bcrypt = require('bcrypt'); 
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
+const { verifyAdminRole } = require('../middleware/authMiddleware'); 
 
 
 // POST /api/auth/admin-login
@@ -112,7 +115,7 @@ router.post('/candidates/check-list', async (req, res) => {
 
 // Endpoint to create an election
 router.post('/create', async (req, res) => {
-  const { electionName, createdBy, voterListName, candidateListName, startTime, endTime } = req.body;
+  const { electionName, createdBy, voterListName, candidateListName, startTime, endTime ,approvedBy } = req.body;
 
   try {
     // Check if the election name already exists
@@ -133,6 +136,7 @@ router.post('/create', async (req, res) => {
     const newElection = new Election({
       electionName,
       createdBy,
+      approvedBy,
       voters: voterListName,
       candidates: candidateListName,
       startTime: start,
@@ -277,6 +281,91 @@ router.get('/searchCandidateLists/:candidateName', async (req, res) => {
     res.status(500).json({ message: 'Internal server error. Please try again later.' });
   }
 });
+
+
+// POST /api/elections/submit - Submit election for approval
+router.post('/pending',  async (req, res) => {
+  const { electionName, createdBy, voterLists, candidateLists, startTime, endTime } = req.body;
+
+  try {
+    const pendingElection = new PendingElection({
+      electionName,
+      createdBy,
+      voterLists,
+      candidateLists,
+      startTime,
+      endTime
+    });
+    await pendingElection.save();
+    res.status(201).json({ success: true, message: 'Election submitted for approval', pendingElection });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error submitting election', error: error.message });
+  }
+});
+
+// PUT /api/elections/approve/:id - Approve a pending election
+router.put('/approve/:id', async (req, res) => {
+  try {
+    const pendingElection = await PendingElection.findById(req.params.id);
+    if (!pendingElection) {
+      return res.status(404).json({ success: false, message: 'Pending election not found' });
+    }
+
+    // Move to Elections collection
+    const approvedElection = new Election({
+      ...pendingElection.toObject(),
+      approvedBy: req.body.name // Assumes admin's name is accessible in req
+    });
+    await approvedElection.save();
+    
+    // Remove from PendingElections collection using deleteOne
+    await PendingElection.deleteOne({ _id: req.params.id });
+
+    res.status(200).json({ success: true, message: 'Election approved successfully', approvedElection });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error approving election', error: error.message });
+  }
+});
+
+// POST /api/elections/request-modification - Request modifications for an election
+router.post('/request-modification', async (req, res) => {
+  const { electionId, updatedFields, modifiedBy } = req.body;
+
+  try {
+    const modifiedElection = new PendingElectionForModifications({
+      originalElectionId: electionId,
+      updatedFields,
+      modifiedBy
+    });
+    await modifiedElection.save();
+    res.status(201).json({ success: true, message: 'Modification request submitted', modifiedElection });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error requesting modification', error: error.message });
+  }
+});
+
+// PUT /api/elections/approve-modification/:id - Approve election modification
+router.put('/approve-modification/:id',  async (req, res) => {
+  try {
+    const pendingModification = await PendingElectionForModifications.findById(req.params.id);
+    if (!pendingModification) {
+      return res.status(404).json({ success: false, message: 'Pending modification not found' });
+    }
+
+    const { originalElectionId, updatedFields } = pendingModification;
+    const updatedElection = await Election.findByIdAndUpdate(originalElectionId, updatedFields, { new: true });
+
+    if (!updatedElection) {
+      return res.status(404).json({ success: false, message: 'Original election not found' });
+    }
+
+    await PendingElectionForModifications.findByIdAndDelete(req.params.id); // Remove pending modification after approval
+    res.status(200).json({ success: true, message: 'Modification approved and applied', updatedElection });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error approving modification', error: error.message });
+  }
+});
+
 
 
 module.exports = router;
