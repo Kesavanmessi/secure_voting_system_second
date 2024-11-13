@@ -9,9 +9,9 @@ mongoose.connect('mongodb://localhost:27017/secureVotingDB', {
 });
 
 const seedAdminData = async () => {
-  const username = "kesavan";
+  const username = "kesavan2";
   const password = "kesavan@123";
-  const role = "Head Admin";
+  const role = "Manager Admin";
 
   // Hash password before saving
   const admin = new Admin({

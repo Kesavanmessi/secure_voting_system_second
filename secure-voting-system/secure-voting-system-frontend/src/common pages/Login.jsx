@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import AuthContext from '../context/AuthContext'; // Import AuthContext
 
 function Login({ login }) {
   const [username, setUsername] = useState('');
@@ -9,6 +10,7 @@ function Login({ login }) {
   const [showPassword, setShowPassword] = useState(false);
   const [isVoter, setIsVoter] = useState(true);
   const [electionName, setElectionName] = useState('');
+  const { loginAdmin } = useContext(AuthContext); // Access loginAdmin from AuthContext
 
   const navigate = useNavigate();
 
@@ -16,7 +18,6 @@ function Login({ login }) {
     setIsVoter(login === 'Voter');
   }, [login]);
 
-  // Function to handle form submission
   const handleLogin = async (e) => {
     e.preventDefault();
 
@@ -29,16 +30,16 @@ function Login({ login }) {
       let response;
 
       if (login === 'Admin') {
-        // 1. Admin Login: Check if admin credentials match in the database
         response = await axios.post('http://localhost:5000/api/elections/admin-login', { username, password });
         if (response.data.success) {
-          navigate('/admin-dashboard');
+          // Save admin data in AuthContext
+          loginAdmin(response.data.admin); // Use the response data to set admin info
+          navigate('/admin-dashboard'); // Redirect to the admin dashboard
         } else {
           setErrorMessage('Invalid admin credentials');
         }
 
       } else if (login === 'Voter') {
-        // 2. Voter Login: Verify election and voter details
         response = await axios.post('http://localhost:5000/api/elections/voter-login', { electionName, voterId: username, password });
         
         if (response.data.success) {
@@ -52,7 +53,6 @@ function Login({ login }) {
       setErrorMessage('Login failed. Please try again.');
     }
 
-    // Clear error message after 5 seconds
     setTimeout(() => setErrorMessage(''), 3000);
   };
 

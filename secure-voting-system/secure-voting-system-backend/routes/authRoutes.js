@@ -13,20 +13,16 @@ require('dotenv').config();
 // POST /api/auth/admin-login
 router.post('/admin-login', async (req, res) => {
   const { username, password } = req.body;
-
   try {
     // Find admin by username
     const admin = await Admin.findOne({ username });
     if (!admin) {
-      return res.status(404).json({ success: false, message: 'Admin not found' });
+      return res.status(200).json({ success: false, message: 'Admin not found' });
     }
     // Check if password is correct
     const isPasswordValid = await bcrypt.compare(password, admin.password);
-    console.log('Entered Password:', password);
-console.log('Stored Hashed Password:', admin.password);
-console.log('Password Validity:', isPasswordValid);
     if (!isPasswordValid) {
-      return res.status(400).json({ success: false, message: 'Invalid password' });
+      return res.status(200).json({ success: false, message: 'Invalid password' });
     }
 
     // Create a JWT token containing admin info, role, and permissions
