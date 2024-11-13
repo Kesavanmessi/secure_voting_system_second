@@ -153,14 +153,28 @@ router.post('/create', async (req, res) => {
 });
 
 
+// GET: Fetch elections based on role
 router.get('/fetching', async (req, res) => {
+  const { createdBy } = req.query; // createdBy is included only for non-head admins
+
   try {
-    const elections = await Election.find({}, 'electionName'); // Only fetch the 'electionName' field
-    res.json(elections);
-  } catch (err) {
-    res.status(500).json({ message: 'Error fetching election names' });
+    let elections;
+
+    if (createdBy) {
+      // If createdBy is specified, fetch elections created by this admin only
+      elections = await Election.find({ createdBy });
+    } else {
+      // If no createdBy is specified, fetch all elections (for Head Admin)
+      elections = await Election.find({});
+    }
+
+    res.status(200).json(elections);
+  } catch (error) {
+    console.error('Error fetching elections:', error);
+    res.status(500).json({ success: false, message: 'Error fetching elections' });
   }
 });
+
 
 router.delete('/trash', async (req, res) => {
   try {

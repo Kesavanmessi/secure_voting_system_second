@@ -1,24 +1,31 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import AuthContext from '../context/AuthContext';
 
 function ManageElection() {
+  const { admin } = useContext(AuthContext); // Access admin info from context
   const [elections, setElections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch elections from the backend
+  // Fetch elections from the backend based on role
   useEffect(() => {
-    axios.get('http://localhost:5000/api/elections/fetching')  // Adjust the URL to your backend endpoint
-      .then((response) => {
+    const fetchElections = async () => {
+      try {
+        const response = await axios.get(`http://localhost:5000/api/elections/fetching`, {
+          params: admin.role === 'Head Admin' ? {} : { createdBy: admin.username }
+        });
         setElections(response.data);
-        setLoading(false);
-      })
-      .catch((error) => {
+      } catch (error) {
         setError('Failed to load elections');
+      } finally {
         setLoading(false);
-      });
-  }, []);
+      }
+    };
+    
+    fetchElections();
+  }, [admin]);
 
   const handleDelete = async (id, name) => {
     const confirmation = prompt(`To confirm, type the name of the election: "${name}"`);
@@ -35,7 +42,6 @@ function ManageElection() {
       alert("Deletion cancelled or incorrect election name entered.");
     }
   };
-  
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col justify-center items-center p-10">
@@ -66,12 +72,14 @@ function ManageElection() {
                     >
                       Manage
                     </Link>
-                    <button
-                      onClick={() => handleDelete(election._id, election.electionName)}
-                      className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-400 flex items-center"
-                    >
-                      <i className="fas fa-trash-alt mr-2"></i> Trash
-                    </button>
+                    {admin.role === 'Head Admin' && (
+                      <button
+                        onClick={() => handleDelete(election._id, election.electionName)}
+                        className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-400 flex items-center"
+                      >
+                        <i className="fas fa-trash-alt mr-2"></i> Trash
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
