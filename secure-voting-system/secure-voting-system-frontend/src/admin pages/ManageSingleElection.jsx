@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import AuthContext from '../context/AuthContext';
 
 function ManageSingleElection() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { admin } = useContext(AuthContext);
 
+  const role = admin.role;
   const [election, setElection] = useState({});
   const [electionName, setElectionName] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -39,11 +42,11 @@ function ManageSingleElection() {
     fetchElectionData();
   }, [id]);
 
+
   const verifyElectionName = async () => {
     try {
       const response = await axios.post('http://localhost:5000/api/elections/verify-name', { electionName });
-      const exists = response.data.exists;
-      if (!exists) {
+      if (!response.data.exists) {
         setIsElectionNameVerified(true);
         setMessage("Election name is available.");
         setMessageType("success");
@@ -57,6 +60,8 @@ function ManageSingleElection() {
       setMessageType("error");
     }
   };
+
+
 
   const handleAddVoter = async () => {
     if (!newVoter) {
@@ -77,8 +82,8 @@ function ManageSingleElection() {
           setMessageType("error");
         }
       } else {
-        setMessage(`${newVoter} is not a valid voter.`);
-        setMessageType("error");
+        setMessage(`${newVoter} is not a valid voter.);
+        setMessageType("error"`);
       }
     } catch (error) {
       console.error("Error adding voter:", error);
@@ -116,6 +121,7 @@ function ManageSingleElection() {
     }
   };
 
+
   const handleVoterDeletionToggle = (voter) => {
     setDeletionList((prev) => ({
       ...prev,
@@ -136,67 +142,98 @@ function ManageSingleElection() {
 
   const handleDeleteSelectedLists = async () => {
     if (deletionList.voters.length === voters.length) {
-      setMessage("Election must have at least one voters List.");
+      setMessage("Election must have at least one voter list.");
       setMessageType("error");
       return;
     }
     if (deletionList.candidates.length === candidates.length) {
-      setMessage("Election must have at least one candidates List.");
+      setMessage("Election must have at least one candidate list.");
       setMessageType("error");
       return;
     }
 
     try {
-      for (const voter of deletionList.voters) {
-        await axios.delete(`http://localhost:5000/api/elections/${id}/list`, {
-          data: { listName: voter, listType: 'voterLists' }
-        });
+      if (role === 'Head Admin') {
+        // Directly delete selected lists if Head Admin
+        const updatedVoters = voters.filter((v) => !deletionList.voters.includes(v));
+        const updatedCandidates = candidates.filter((c) => !deletionList.candidates.includes(c));
+        
+        await Promise.all(deletionList.voters.map(voter => 
+          axios.delete(`http://localhost:5000/api/elections/${id}/list`, {
+            data: { listName: voter, listType: 'voterLists' }
+          })
+        ));
+        await Promise.all(deletionList.candidates.map(candidate => 
+          axios.delete(`http://localhost:5000/api/elections/${id}/list`, {
+            data: { listName: candidate, listType: 'candidateLists' }
+          })
+        ));
+
+        setVoters(updatedVoters);
+        setCandidates(updatedCandidates);
+        setMessage("Selected lists deleted successfully.");
+        setMessageType("success");
+        setDeletionList({ voters: [], candidates: [] });
+      } else {
+        // For other admins, submit modification request
+        const updatedVoters = voters.filter((v) => !deletionList.voters.includes(v));
+        const updatedCandidates = candidates.filter((c) => !deletionList.candidates.includes(c));
+
+        const modificationRequest = {
+          electionId: id,
+          updatedFields: {
+            electionName,
+            startTime,
+            endTime,
+            voterLists: updatedVoters,
+            candidateLists: updatedCandidates
+          },
+          modifiedBy: admin.username,
+        };
+
+        await axios.post('http://localhost:5000/api/elections/request-modification', modificationRequest);
+        setMessage("Modification request submitted for approval.");
+        setMessageType("success");
       }
-      for (const candidate of deletionList.candidates) {
-        await axios.delete(`http://localhost:5000/api/elections/${id}/list`, {
-          data: { listName: candidate, listType: 'candidateLists' }
-        });
-      }
-      setDeletionList({ voters: [], candidates: [] });
-      setMessage("Selected lists deleted successfully.");
-      setMessageType("success");
     } catch (error) {
-      console.error("Error deleting lists:", error);
-      setMessage("An error occurred while deleting lists.");
+      console.error("Error processing deletions:", error);
+      setMessage("An error occurred while processing deletions.");
       setMessageType("error");
     }
   };
 
-
-
   const handleUpdateElection = async () => {
     if (startTime > endTime) {
-      alert("EndTime should be greater than StartTime.");
-      return;
-    }
-    if (electionName !== election.electionName && !isElectionNameVerified) {
-      setMessage("Please verify the election name before updating.");
+      setMessage("End time should be greater than start time.");
       setMessageType("error");
       return;
     }
-    
-    const confirmUpdate = window.confirm("Are you sure you want to save the changes?");
+    if(!isElectionNameVerified)
+    {
+      setMessage("As you are  Modified the Election Name But not verified it please verify the election name");
+      setMessageType("error");
+      return;
+    }
+    const confirmUpdate = (role === 'Head Admin') ? window.confirm("Are you sure you want to save the changes?") : window.confirm("Are you sure you want to submit for the changes?")
     if (!confirmUpdate) return;
-
     try {
-      const updatedVoters = voters.filter(v => !deletionList.voters.includes(v));
-      const updatedCandidates = candidates.filter(c => !deletionList.candidates.includes(c));
-
-      await axios.put(`http://localhost:5000/api/elections/${id}`, {
-        electionName,
-        startTime,
-        endTime,
-        voters: updatedVoters,
-        candidates: updatedCandidates,
-      });
-
-      setMessage(`Election "${electionName}" updated successfully.`);
-      setMessageType("success");
+      if (role === 'Head Admin') {
+        const updateData = {
+          electionName,
+          startTime,
+          endTime,
+          voters,
+          candidates,
+          modifiedBy: admin.username,
+        };
+        await axios.put(`http://localhost:5000/api/elections/${id}`, updateData);
+        setMessage(`Election "${electionName}" updated successfully.`);
+        setMessageType("success");
+      } else {
+        handleDeleteSelectedLists();
+        setMessage("Your modifications have been submitted for approval.");
+        setMessageType("success");
+      }
       setTimeout(() => navigate('/admin-dashboard/manage-election'), 3000);
     } catch (error) {
       console.error("Error updating election:", error);
@@ -205,33 +242,34 @@ function ManageSingleElection() {
     }
   };
 
-  const renderMessage = () => (
-    message && (
-      <div className={`p-4 rounded mb-4 ${messageType === "success" ? "bg-green-500" : "bg-red-500"}`}>
-        {message}
-      </div>
-    )
-  );
+
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-10">
-  <h1 className="text-4xl mb-5 text-green-400">Manage Election: {election?.electionName}</h1>
-  {renderMessage()}
+      <h1 className="text-4xl mb-5 text-green-400">Manage Election: {election?.electionName}</h1>
+      {message && (
+        <div className={`p-4 rounded mb-4 ${messageType === "success" ? "bg-green-500" : "bg-red-500"}`}>
+          {message}
+        </div>
+      )}
 
-  <div className="mb-5 flex items-center">
-    <label className="text-xl mr-2">New Election Name :</label>
-    <input
-      type="text"
-      value={electionName}
-      onChange={(e) => {
-        setElectionName(e.target.value);
-        setIsElectionNameVerified(false); // Reset verification status when name changes
-      }}
-      className="p-2 text-black rounded"
-    />
-    <button onClick={verifyElectionName} className="bg-blue-500 text-white px-4 py-2 ml-2 rounded">Verify</button>
-  </div> {/* Added this closing div for the election name section */}
+      {/* Election Name Section */}
+      <div className="mb-5 flex items-center">
+        <label className="text-xl mr-2">New Election Name :</label>
+        <input
+          type="text"
+          value={electionName}
+          onChange={(e) => {
+            setElectionName(e.target.value);
+            setIsElectionNameVerified(false); // Reset verification status when name changes
+          }}
+          className="p-2 text-black rounded"
+        />
+        <button onClick={verifyElectionName} className="bg-blue-500 text-white px-4 py-2 ml-2 rounded">Verify</button>
+      </div>
 
-  <div className="mb-5">
+      {/* Start Time, End Time, Voters, Candidates Sections go here */}
+      <div className="mb-5">
     <label className="text-xl">Start Time:</label>
     <input
       type="datetime-local"
@@ -308,21 +346,24 @@ function ManageSingleElection() {
     </div>
   </div>
   
-  <button
-    onClick={handleUpdateElection}
-    className="bg-yellow-500 text-white px-4 py-2 rounded"
-  >
-    Update Election
-  </button>
+      {/* Update and Delete Buttons */}
+      <button
+        onClick={handleUpdateElection}
+        className="bg-yellow-500 text-white px-4 py-2 rounded"
+      >
+        {role === 'Head Admin' ? 'Update Election' : 'Submit for Modification'}
+      </button>
 
-  <button
-    onClick={handleDeleteSelectedLists}
-    className="bg-red-500 text-white px-4 py-2 rounded ml-4"
-  >
-    Delete Selected Voters/Candidates
-  </button>
-</div>
-
+      {/* Show Delete Button Only for Head Admin */}
+      {admin.role === 'Head Admin' && (
+        <button
+          onClick={handleDeleteSelectedLists}
+          className="bg-red-500 text-white px-4 py-2 rounded ml-4"
+        >
+          Delete Selected Voters/Candidates
+        </button>
+      )}
+    </div>
   );
 }
 

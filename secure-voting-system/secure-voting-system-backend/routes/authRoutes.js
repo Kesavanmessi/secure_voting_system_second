@@ -346,12 +346,19 @@ router.post('/request-modification', async (req, res) => {
   const { electionId, updatedFields, modifiedBy } = req.body;
 
   try {
-    const modifiedElection = new PendingElectionForModifications({
-      originalElectionId: electionId,
-      updatedFields,
-      modifiedBy
-    });
-    await modifiedElection.save();
+    // Use findOneAndUpdate with upsert option
+    const modifiedElection = await PendingElectionForModifications.findOneAndUpdate(
+      { originalElectionId: electionId }, // Filter by election ID
+      {
+        updatedFields,
+        modifiedBy,
+      },
+      {
+        new: true,      // Return the updated document
+        upsert: true,   // Insert a new document if no matching document is found
+      }
+    );
+
     res.status(201).json({ success: true, message: 'Modification request submitted', modifiedElection });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error requesting modification', error: error.message });
