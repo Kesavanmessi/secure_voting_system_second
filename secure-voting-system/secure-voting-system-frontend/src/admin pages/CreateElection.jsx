@@ -81,6 +81,14 @@ function CreateElection() {
       return;
     }
 
+    if (verifiedVoterLists.length === 0) {
+      setMessage("Please add at least one voter list.");
+      return;
+    }
+    if (verifiedCandidateLists.length === 0) {
+      setMessage("Please add at least one candidate list.");
+      return;
+    }
     const electionData = {
       electionName,
       createdBy: admin?.username || 'admin1',
@@ -90,14 +98,14 @@ function CreateElection() {
       endTime,
       approvedBy: admin?.role === 'Head Admin' ? admin?.username : null
     };
-
+   console.log(electionData)
     try {
       const endpoint = admin?.role === 'Head Admin'
         ? 'http://localhost:5000/api/elections/create'
-        : 'http://localhost:5000/api/elections/pending';
+        : 'http://localhost:5000/api/elections/submit';
 
       const response = await axios.post(endpoint, electionData);
-
+      
       setMessage(`Election "${electionName}" ${admin?.role === 'Head Admin' ? 'created' : 'submitted for approval'} successfully.`);
       setTimeout(() => navigate('/admin-dashboard'), 5000);
     } catch (error) {

@@ -8,7 +8,8 @@ const ElectionSchema = new mongoose.Schema({
   candidateLists: [{ type: String, required: true }],
   startTime: { type: Date, required: true },
   endTime: { type: Date, required: true },
-  isResultPublished: { type: Boolean, default: false }
+  isResultPublished: { type: Boolean, default: false } ,
+   isPopulated: { type: Boolean, default: false },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Election', ElectionSchema);

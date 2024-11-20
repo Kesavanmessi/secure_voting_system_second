@@ -10,7 +10,7 @@ function Login({ login }) {
   const [showPassword, setShowPassword] = useState(false);
   const [isVoter, setIsVoter] = useState(true);
   const [electionName, setElectionName] = useState('');
-  const { loginAdmin } = useContext(AuthContext); // Access loginAdmin from AuthContext
+  const { loginAdmin , loginVoter} = useContext(AuthContext); // Access loginAdmin from AuthContext
 
   const navigate = useNavigate();
 
@@ -21,28 +21,28 @@ function Login({ login }) {
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    if (!username || !password) {
-      setErrorMessage('Username and password are required');
+    if (!username || !password || (isVoter && !electionName)) {
+      setErrorMessage('All fields are required');
       return;
     }
 
     try {
-      let response;
-
       if (login === 'Admin') {
-        response = await axios.post('http://localhost:5000/api/elections/admin-login', { username, password });
+        const response = await axios.post('http://localhost:5000/api/elections/admin-login', { username, password });
         if (response.data.success) {
-          // Save admin data in AuthContext
-          loginAdmin(response.data.admin); // Use the response data to set admin info
-          navigate('/admin-dashboard'); // Redirect to the admin dashboard
+          loginAdmin(response.data.admin); // Save admin data
+          navigate('/admin-dashboard');
         } else {
           setErrorMessage('Invalid admin credentials');
         }
-
       } else if (login === 'Voter') {
-        response = await axios.post('http://localhost:5000/api/elections/voter-login', { electionName, voterId: username, password });
-        
+        const response = await axios.post('http://localhost:5000/api/elections/voter-login', {
+          electionName,
+          voterId: username,
+          password,
+        });
         if (response.data.success) {
+          loginVoter(response.data.voter); // Save voter and election details
           navigate('/voter-dashboard');
         } else {
           setErrorMessage(response.data.message || 'Invalid voter credentials');

@@ -25,7 +25,7 @@ function ManageSingleElection() {
   useEffect(() => {
     const fetchElectionData = async () => {
       try {
-        const { data } = await axios.get(`http://localhost:5000/api/elections/${id}`);
+        const { data } = await axios.get(`http://localhost:5000/api/elections/one/${id}`);
         setElection(data);
         setElectionName(data.electionName);
         setStartTime(data.startTime);
@@ -65,7 +65,7 @@ function ManageSingleElection() {
 
   const handleAddVoter = async () => {
     if (!newVoter) {
-      alert('Please enter a voter name.');
+      alert('Please enter a voter list name.');
       return;
     }
 
@@ -82,8 +82,8 @@ function ManageSingleElection() {
           setMessageType("error");
         }
       } else {
-        setMessage(`${newVoter} is not a valid voter.);
-        setMessageType("error"`);
+        setMessage(`${newVoter} is not a valid voter list`);
+        setMessageType("error");
       }
     } catch (error) {
       console.error("Error adding voter:", error);
@@ -94,7 +94,7 @@ function ManageSingleElection() {
 
   const handleAddCandidate = async () => {
     if (!newCandidate) {
-      alert('Please enter a candidate name.');
+      alert('Please enter a candidate list name.');
       return;
     }
 
@@ -111,7 +111,7 @@ function ManageSingleElection() {
           setMessageType("error");
         }
       } else {
-        setMessage(`${newCandidate} is not a valid candidate.`);
+        setMessage(`${newCandidate} is not a valid candidate list.`);
         setMessageType("error");
       }
     } catch (error) {
@@ -226,7 +226,7 @@ function ManageSingleElection() {
           candidates,
           modifiedBy: admin.username,
         };
-        await axios.put(`http://localhost:5000/api/elections/${id}`, updateData);
+        await axios.put(`http://localhost:5000/api/elections/one/${id}`, updateData);
         setMessage(`Election "${electionName}" updated successfully.`);
         setMessageType("success");
       } else {

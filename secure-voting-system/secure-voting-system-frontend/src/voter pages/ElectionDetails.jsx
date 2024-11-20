@@ -1,71 +1,132 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useContext } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import AuthContext from '../context/AuthContext';
 
 function ElectionDetails() {
-  // Mock data for election details (you can replace this with actual data later)
-  const [electionDetails, setElectionDetails] = useState({
-    name: 'Presidential Election 2024',
-    candidates: [
-      { id: 1, name: 'Candidate 1', description: 'A brief description about Candidate 1.' },
-      { id: 2, name: 'Candidate 2', description: 'A brief description about Candidate 2.' },
-      { id: 3, name: 'Candidate 3', description: 'A brief description about Candidate 3.' },
-    ],
-    startTime: new Date('2024-10-01T08:00:00'), // Mock start time
-    endTime: new Date('2024-10-20T18:00:00'),  // Mock end time
-    isResultPublished: false, // To be updated after backend integration
-  });
-
-  // Track if the description has been read
-  const [hasReadDescription, setHasReadDescription] = useState(false);
-  const [canProceedToVote, setCanProceedToVote] = useState(false); // To enable voting after timeout
+  const { voter } = useContext(AuthContext); // Access voter details
+  const [candidates, setCandidates] = useState([]);
   const [message, setMessage] = useState('');
-  
-  // Current date to compare with election time
-  // const currentTime = new Date();
-  const isOngoing = true;
-  // Logic for ongoing and finished election
-  // const isOngoing = currentTime >= electionDetails.startTime && currentTime <= electionDetails.endTime;
-  const isFinished = false;
+  const [selectedCandidateId, setSelectedCandidateId] = useState(null);
+  const [hasReadDescription, setHasReadDescription] = useState(false);
+  const [canProceedToVote, setCanProceedToVote] = useState(false);
+  const [isResultPublished, setIsResultPublished] = useState(false);
+  const navigate = useNavigate();
 
-  // Function to handle description reading
+  const { electionDetails } = voter;
+
+  useEffect(() => {
+    const fetchCandidates = async () => {
+      try {
+        const response = await axios.post(
+          'http://localhost:5000/api/elections/electionCandidates-details',
+          { electionId: electionDetails.electionId }
+        );
+
+        if (response.data.success) {
+          setCandidates(response.data.candidates);
+        } else {
+          setMessage('Failed to fetch candidates details.');
+        }
+      } catch (error) {
+        console.error('Error fetching candidates details:', error);
+        setMessage('Error fetching candidates details. Please try again.');
+      }
+    };
+
+    const checkResultPublished = async () => {
+      try {
+        const response = await axios.post(
+          'http://localhost:5000/api/elections/is-result-published',
+          { electionId: electionDetails.electionId }
+        );
+
+        if (response.data.success) {
+          setIsResultPublished(response.data.isPublished);
+        }
+      } catch (error) {
+        console.error('Error checking result status:', error);
+      }
+    };
+
+    fetchCandidates();
+    checkResultPublished();
+  }, [electionDetails.electionId]);
+
   const handleReadDescription = () => {
-    setHasReadDescription(true); // Mark that the user has clicked the button
+    setHasReadDescription(true);
     setMessage('Please read the description. You will be able to vote in 10 seconds.');
 
-    // Set a timeout to allow voting after 10 seconds
     setTimeout(() => {
       setCanProceedToVote(true);
       setMessage('You can now proceed to vote.');
     }, 10000); // 10 seconds delay
   };
 
-  // Function to handle the voting button click
-  const handleProceedToVote = () => {
-    if (!canProceedToVote) {
-      setMessage('Please read the description and wait for 10 seconds before voting.');
-    } else {
-      setMessage('');  // Clear any messages if everything is correct
+  const handleVoteSubmit = async () => {
+    if (!selectedCandidateId) {
+      setMessage('Please select a candidate to vote for.');
+      return;
+    }
+    console.log(voter.electionDetails.electionId , voter.voterId , selectedCandidateId);
+    try {
+      const response = await axios.post('http://localhost:5000/api/elections/cast-vote', {
+        electionId: voter.electionDetails.electionId,
+        candidateId: selectedCandidateId,
+        voterId: voter.voterId,
+      });
+
+      if (response.data.success) {
+        setMessage('Vote cast successfully!');
+        navigate('/voter-dashboard'); // Redirect after successful voting
+      } else {
+        setMessage(response.data.message || 'Failed to cast vote.');
+      }
+    } catch (error) {
+      console.error('Error casting vote:', error);
+      setMessage('Error casting vote. Please try again.');
     }
   };
 
+  const currentTime = new Date();
+  const startTime = new Date(electionDetails.startTime);
+  const endTime = new Date(electionDetails.endTime);
+
+  const isOngoing = currentTime >= startTime && currentTime <= endTime;
+  const isFinished = currentTime > endTime;
+
+  if (candidates.length === 0) {
+    return <p className="text-white text-center">Loading candidates...</p>;
+  }
+
   return (
     <div className="bg-gray-800 p-10 text-white flex flex-col items-center">
-      <h1 className="text-4xl mb-8">{electionDetails.name}</h1>
+      <h1 className="text-4xl mb-8">{electionDetails.electionName}</h1>
 
-      {isOngoing && !electionDetails.isResultPublished && !isFinished && (
+      {!isOngoing && !isFinished && (
+        <p className="text-gray-400 text-lg">The election has not started yet. Please check back later.</p>
+      )}
+
+      {isOngoing && (
         <div>
-          {/* Display election information while it's ongoing */}
           <h2 className="text-2xl mb-4">Participating Candidates</h2>
           <ul className="list-disc mb-6">
-            {electionDetails.candidates.map(candidate => (
-              <li key={candidate.id} className="mb-2">
-                <strong>{candidate.name}:</strong> {candidate.description}
+            {candidates.map((candidate) => (
+              <li
+                key={candidate.candidateId}
+                className={`mb-2 cursor-pointer ${
+                  selectedCandidateId === candidate.candidateId
+                    ? 'text-green-400'
+                    : 'text-white'
+                }`}
+                onClick={() => setSelectedCandidateId(candidate.candidateId)}
+              >
+                <strong>{candidate.name}</strong> ({candidate.party})
               </li>
             ))}
           </ul>
 
           <div className="flex flex-col space-y-4 mb-8">
-            {/* Description Button */}
             {!hasReadDescription && (
               <button
                 className="bg-blue-500 hover:bg-blue-400 text-white py-2 px-4 rounded"
@@ -75,32 +136,35 @@ function ElectionDetails() {
               </button>
             )}
 
-            {/* Description Section (after clicking Read Description) */}
             {hasReadDescription && (
               <div>
                 <p className="text-lg mb-4">
-                  This election is crucial for selecting the next President. Each candidate has a unique stance on various important topics like economy, healthcare, and education. Make sure to carefully consider the candidate’s profiles before casting your vote.
+                  This election is crucial for selecting the next leader. Carefully consider the
+                  candidates' profiles before casting your vote.
                 </p>
               </div>
             )}
 
-            {/* Proceed to Vote Button - Disabled until description is read and timeout has passed */}
-            <Link
-              to={canProceedToVote ? '/voting-page' : '#'}
-              onClick={handleProceedToVote}
-              className={`${
-                canProceedToVote
-                  ? 'bg-green-500 hover:bg-green-400'
-                  : 'bg-gray-500 cursor-not-allowed'
-              } text-white py-2 px-4 rounded text-center`}
-            >
-              Proceed to Vote
-            </Link>
+            {canProceedToVote ? (
+              <button
+                onClick={handleVoteSubmit}
+                className="bg-green-500 hover:bg-green-400 text-white py-2 px-4 rounded"
+              >
+                Confirm and Cast Vote
+              </button>
+            ) : (
+              <p className="text-gray-400">You need to read the description before casting your vote.</p>
+            )}
           </div>
 
-          {/* Message displayed for user actions */}
           {message && (
-            <p className={`text-white-400 text-lg mb-4 text-center p-1 ${message.includes("proceed")?"bg-green-500":"bg-red-500"}`}>{message}</p>
+            <p
+              className={`text-white-400 text-lg mb-4 text-center p-1 ${
+                message.includes('successfully') ? 'bg-green-500' : 'bg-red-500'
+              }`}
+            >
+              {message}
+            </p>
           )}
         </div>
       )}
@@ -108,17 +172,15 @@ function ElectionDetails() {
       {isFinished && (
         <div className="text-center">
           <h2 className="text-2xl mb-4">The election has finished.</h2>
-          {electionDetails.isResultPublished ? (
+          {isResultPublished ? (
             <Link
-              to='/voter-result'
+              to="/voter-result"
               className="bg-yellow-500 hover:bg-yellow-400 text-white py-2 px-4 rounded"
             >
               View Result
             </Link>
           ) : (
-            <p className="text-gray-400">
-              The result is not yet published. Please check back later.
-            </p>
+            <p className="text-gray-400">The result is not yet published. Please check back later.</p>
           )}
         </div>
       )}
