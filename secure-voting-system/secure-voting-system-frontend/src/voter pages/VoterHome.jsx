@@ -4,21 +4,26 @@ import AuthContext from '../context/AuthContext';
 function Home() {
   const { voter } = useContext(AuthContext);
   const [timeLeft, setTimeLeft] = useState("");
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
-     
-    
     const interval = setInterval(() => {
       const currentTime = new Date();
       const startTime = new Date(voter?.electionDetails?.startTime);
+      const adjustedStartTime = new Date(startTime.getTime() + 1 * 60 * 1000); // Add 1 minute
       const endTime = new Date(voter?.electionDetails?.endTime);
-      if (currentTime < startTime) {
-        const diff = startTime - currentTime;
-        setTimeLeft(`Election starts in: ${formatTime(diff)}`);
-      } else if (currentTime >= startTime && currentTime <= endTime) {
-        setTimeLeft("Election is ongoing");
+
+      if (currentTime < adjustedStartTime) {
+        const diff = adjustedStartTime - currentTime;
+        setMessage("Election starts in:");
+        setTimeLeft(formatTime(diff));
+      } else if (currentTime >= adjustedStartTime && currentTime <= endTime) {
+        const diff = endTime - currentTime;
+        setMessage("Election ends in:");
+        setTimeLeft(formatTime(diff));
       } else {
-        setTimeLeft("Election has ended");
+        setMessage("Election has ended.");
+        setTimeLeft(""); // No countdown after the election ends
       }
     }, 1000);
 
@@ -39,6 +44,7 @@ function Home() {
       <h2 className="text-2xl mb-4 text-green-400">
         Election Name: {voter?.electionDetails?.electionName || 'N/A'}
       </h2>
+      <p className="text-yellow-300">{message}</p>
       <p className="text-yellow-300">{timeLeft}</p>
 
       {/* Voter Information */}

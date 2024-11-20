@@ -24,7 +24,10 @@ const startScheduler = () => {
 
         // Check if voters have already been populated
         const existingVoterDocument = await ElectionVoters.findOne({ electionId: election._id });
-        if (!existingVoterDocument) {
+
+        const existingCandidateDocument = await ElectionCandidates.findOne({ electionId: election._id });
+
+        if (!existingVoterDocument && !existingCandidateDocument) {
           // Populate ElectionVoters if not already populated
           const voterLists = election.voterLists || [];
           const voterListPromises = voterLists.map(listName => Voter.findOne({ listname: listName }));
@@ -43,9 +46,6 @@ const startScheduler = () => {
             }).save();
             console.log(`Voters populated for election: ${election.electionName}`);
           }
-        } else {
-          console.log(`Voters already populated for election: ${election.electionName}`);
-        }
 
         // Fetch and add candidates (same approach as for voters)
         const candidateLists = election.candidateLists || []; // Get the list of candidate lists
@@ -65,7 +65,6 @@ const startScheduler = () => {
             electionId: election._id,
             candidates: candidatesToAdd,
           }).save();
-          console.log(`Candidates populated for election: ${election.electionName}`);
         }
 
         // Mark election as populated
@@ -73,6 +72,9 @@ const startScheduler = () => {
         await election.save();
         console.log(`Election "${election.electionName}" marked as populated.`);
       }
+      else {
+        console.log(`Voters already populated for election: ${election.electionName}`);
+      }}
     } catch (error) {
       console.error('Error in scheduled job:', error.message);
     }

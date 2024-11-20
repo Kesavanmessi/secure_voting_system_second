@@ -8,6 +8,9 @@ const ElectionSchema = new mongoose.Schema({
   candidateLists: [{ type: String, required: true }],
   startTime: { type: Date, required: true },
   endTime: { type: Date, required: true },
+  description:{
+    type:String
+  },
   isResultPublished: { type: Boolean, default: false } ,
    isPopulated: { type: Boolean, default: false },
 }, { timestamps: true });

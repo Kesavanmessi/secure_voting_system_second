@@ -13,10 +13,22 @@ function CreateElection() {
   const [step, setStep] = useState(1);
   const [verifiedVoterLists, setVerifiedVoterLists] = useState([]);
   const [verifiedCandidateLists, setVerifiedCandidateLists] = useState([]);
+  const [description, setDescription] = useState('');
   const { admin } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const verifyElectionName = async () => {
+    if(electionName.length < 8)
+    {
+      setMessage("Election Name Should be Minimum 8 letters")
+      return;
+    }
+    if(description.length < 20)
+    {
+      setMessage("description Should be explain in atleast 20  letters")
+      return;
+    }
+
     try {
       const response = await axios.post('http://localhost:5000/api/elections/verify-name', { electionName });
       if (response.data.exists) {
@@ -73,14 +85,26 @@ function CreateElection() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const currentTime = new Date();
     const start = new Date(startTime);
     const end = new Date(endTime);
+    
+    const fiveHoursInMilliseconds = 5 * 60 * 60 * 1000;
+    const fifteenHoursInMilliseconds = 15 * 60 * 60 * 1000;
 
+  if (start - currentTime < fiveHoursInMilliseconds) {
+    setMessage("The start time must be at least 5 hours from the current time.");
+    return;
+  }
     if (end <= start) {
       setMessage("End time must be greater than start time.");
       return;
     }
 
+    if (end - start < fiveHoursInMilliseconds || end - start > fifteenHoursInMilliseconds) {
+      setMessage('Election running time should be atleast 5 hours and atmost 15.');
+      return;
+    }
     if (verifiedVoterLists.length === 0) {
       setMessage("Please add at least one voter list.");
       return;
@@ -91,6 +115,7 @@ function CreateElection() {
     }
     const electionData = {
       electionName,
+      description,
       createdBy: admin?.username || 'admin1',
       voterLists: verifiedVoterLists,
       candidateLists: verifiedCandidateLists,
@@ -98,13 +123,12 @@ function CreateElection() {
       endTime,
       approvedBy: admin?.role === 'Head Admin' ? admin?.username : null
     };
-   console.log(electionData)
     try {
       const endpoint = admin?.role === 'Head Admin'
         ? 'http://localhost:5000/api/elections/create'
         : 'http://localhost:5000/api/elections/submit';
 
-      const response = await axios.post(endpoint, electionData);
+      await axios.post(endpoint, electionData);
       
       setMessage(`Election "${electionName}" ${admin?.role === 'Head Admin' ? 'created' : 'submitted for approval'} successfully.`);
       setTimeout(() => navigate('/admin-dashboard'), 5000);
@@ -120,15 +144,21 @@ function CreateElection() {
         <h2 className="text-3xl text-green-500 mb-5">Create Election</h2>
 
         {message && (
-          <div className={`mb-5 p-3 rounded ${message.includes("successfully") ? "bg-green-600" : "bg-red-600"}`}>
+          <div
+            className={`mb-5 p-3 rounded ${
+              message.includes('successfully') ? 'bg-green-600' : 'bg-red-600'
+            }`}
+          >
             {message}
           </div>
         )}
 
-        {/* Step 1: Enter Election Name */}
+        {/* Step 1: Enter Election Name and Description */}
         {step === 1 && (
           <div className="mb-5">
-            <label htmlFor="election-name" className="text-lg">Election Name:</label>
+            <label htmlFor="election-name" className="text-lg">
+              Election Name:
+            </label>
             <input
               id="election-name"
               type="text"
@@ -137,12 +167,29 @@ function CreateElection() {
               onChange={(e) => setElectionName(e.target.value)}
               required
             />
-            <button type="button" onClick={verifyElectionName} className="mt-3 bg-blue-500 p-2 rounded-lg w-full">
+
+            <label htmlFor="description" className="text-lg mt-4 block">
+              Description:
+            </label>
+            <textarea
+              id="description"
+              className="w-full mt-2 p-2 rounded-lg text-black"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows="4"
+              placeholder="Provide a brief description of the election"
+              required
+            ></textarea>
+
+            <button
+              type="button"
+              onClick={verifyElectionName}
+              className="mt-3 bg-blue-500 p-2 rounded-lg w-full"
+            >
               Verify Election Name
             </button>
           </div>
         )}
-
         {/* Step 2: Add Multiple Voter Lists */}
         {step === 2 && (
           <>

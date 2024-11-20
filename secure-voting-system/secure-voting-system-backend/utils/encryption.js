@@ -30,5 +30,4 @@ function decryptVoteCount(encryptedCount) {
   decrypted = Buffer.concat([decrypted, decipher.final()]);
   return parseInt(decrypted.toString());
 }
-console.log(decryptVoteCount("97a41838cca08c4ce7cf519b6eba8449:6bb4b97e3e710b5abd2b59a8bfe033e5"));
 module.exports = { encryptVoteCount, decryptVoteCount };

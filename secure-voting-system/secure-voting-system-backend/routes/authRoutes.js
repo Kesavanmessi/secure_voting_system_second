@@ -118,8 +118,7 @@ router.post('/candidates/check-list', async (req, res) => {
 
 // Endpoint to create an election
 router.post('/create', async (req, res) => {
-  const { electionName, createdBy, voterLists, candidateLists, startTime, endTime, approvedBy } = req.body;
-console.log(req.body);
+  const { electionName, description ,createdBy, voterLists, candidateLists, startTime, endTime, approvedBy } = req.body;
   try {
     const existingElection = await Election.findOne({ electionName });
     if (existingElection) {
@@ -134,6 +133,7 @@ console.log(req.body);
 
     const newElection = new Election({
       electionName,
+      description,
       createdBy,
       approvedBy,
       voterLists,
@@ -155,18 +155,12 @@ console.log(req.body);
 
 // GET: Fetch elections based on role
 router.get('/fetching', async (req, res) => {
-  const { createdBy } = req.query; // createdBy is included only for non-head admins
+   // createdBy is included only for non-head admins
   
   try {
     let elections;
-
-    if (createdBy) {
-      // If createdBy is specified, fetch elections created by this admin only
-      elections = await Election.find({ createdBy });
-    } else {
       // If no createdBy is specified, fetch all elections (for Head Admin)
       elections = await Election.find({});
-    }
 
     res.status(200).json(elections);
   } catch (error) {
@@ -175,6 +169,55 @@ router.get('/fetching', async (req, res) => {
   }
 });
 
+router.get('/ongoing-details', async (req, res) => {
+  const { electionId } = req.query;
+
+  try {
+    // Validate election ID
+    if (!electionId) {
+      return res.status(400).json({ success: false, message: 'Election ID is required.' });
+    }
+
+    // Fetch election details
+    const election = await Election.findById(electionId);
+    if (!election) {
+      return res.status(404).json({ success: false, message: 'Election not found.' });
+    }
+
+    const currentTime = new Date();
+    const startTime = new Date(election.startTime);
+    const endTime = new Date(election.endTime);
+
+    // Validate if the election is ongoing
+    if (currentTime < startTime || currentTime > endTime) {
+      return res.status(400).json({ success: false, message: 'Election is not currently ongoing.' });
+    }
+
+    // Fetch voter details
+    const voterData = await ElectionVoters.findOne({ electionId });
+    if (!voterData) {
+      return res.status(404).json({ success: false, message: 'Voter data not found for this election.' });
+    }
+
+    const totalVoters = voterData.voters.length;
+    const voterCount = voterData.voters.filter(voter => voter.isVoted).length;
+
+    // Return details
+    res.status(200).json({
+      success: true,
+      voterCount,
+      totalVoters,
+      electionDetails: {
+        electionName: election.electionName,
+        startTime: election.startTime,
+        endTime: election.endTime,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching ongoing election details:', error.message);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
 
 router.delete('/trash', async (req, res) => {
   try {
@@ -482,7 +525,7 @@ router.post('/voter-login', async (req, res) => {
     // Step 1: Fetch election by name
     const election = await Election.findOne({ electionName });
     if (!election) {
-      return res.status(404).json({ success: false, message: 'Election not found' });
+      return res.status(200).json({ success: false, message: 'Election not found' });
     }
 
     // Step 2: Check voter lists in the election
@@ -497,16 +540,31 @@ router.post('/voter-login', async (req, res) => {
     // Step 4: Check if the voter exists in the voter list
     const voterFound = voterList.voters.find((voter) => voter.voterId === voterId);
     if (!voterFound) {
-      return res.status(404).json({ success: false, message: 'Voter not found in the list' });
+      return res.status(200).json({ success: false, message: 'Voter not found in the list' });
     }
 
     // Step 5: Verify password
     const isPasswordValid = voterFound.password === password;
     if (!isPasswordValid) {
-      return res.status(400).json({ success: false, message: 'Invalid password' });
+      return res.status(200).json({ success: false, message: 'Invalid password' });
+    }
+    const currTime = new Date();
+    // Step 6: Check voting status in ElectionVoters
+    if(currTime >= election.startTime && currTime <= election.endTime){
+    const votersDoc = await ElectionVoters.findOne({ electionId: election._id });
+    if (!votersDoc) {
+      return res.status(404).json({ success: false, message: 'Election voters data not found' });
     }
 
-    // Step 6: Return success response with voter and election details
+    const voterStatus = votersDoc.voters.find((v) => v.voterId === voterId);
+    if (voterStatus && voterStatus.isVoted) {
+      return res.status(200).json({
+        success: false,
+        message: 'You have already voted. Access will be allowed only after the election finishes.',
+      });
+    }
+  }
+    // Step 7: Return success response with voter and election details
     res.status(200).json({
       success: true,
       message: 'Login successful',
@@ -517,9 +575,10 @@ router.post('/voter-login', async (req, res) => {
         age: voterFound.age,
         electionDetails: {
           electionName: election.electionName,
-          electionId:election._id,
+          electionId: election._id,
           startTime: election.startTime,
           endTime: election.endTime,
+          description:election.description
         },
       },
     });
@@ -528,6 +587,7 @@ router.post('/voter-login', async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 });
+
 
 
 
@@ -575,7 +635,6 @@ router.post('/electionCandidates-details', async (req, res) => {
 // Endpoint to cast a vote
 router.post('/cast-vote', async (req, res) => {
   const { electionId, candidateId, voterId } = req.body;
-  console.log(req.body);
   try {
     const timestamp = new Date().toISOString();
     const dataToHash = `${electionId}:${candidateId}:${voterId}:${timestamp}`;
