@@ -4,33 +4,33 @@ const Voter = require('./models/Voters'); // Adjust the path as needed
 // Replace with your MongoDB connection URI
 const uri = 'mongodb://localhost:27017/secureVotingDB';
 
-mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(uri)
   .then(() => console.log('MongoDB connected for Voters'))
   .catch(err => console.error('MongoDB connection error for Voters:', err));
 
 const seedVotersData = async () => {
   const voters = [
     {
-      listname: "General Election 2024",
+      listname: "Election 2024",
       voters: [
         {
           voterId: 'voter123',
           voterName: 'John Doe',
-          password: 'password123', // Store passwords securely in a real project
+          password: 'kesavan@123', // Store passwords securely in a real project
           address: '123 Main St',
           age: 30
         },
         {
-          voterId: 'voter456',
+          voterId: 'voter000',
           voterName: 'Jane Smith',
-          password: 'password456', // Store passwords securely in a real project
+          password: 'kesavan@123', // Store passwords securely in a real project
           address: '456 Oak Ave',
           age: 25
         },
         {
-          voterId: 'voter789',
+          voterId: 'voter111',
           voterName: 'David Johnson',
-          password: 'password789', // Store passwords securely in a real project
+          password: 'kesavan@123', // Store passwords securely in a real project
           address: '789 Pine Rd',
           age: 45
         }

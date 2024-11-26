@@ -21,6 +21,8 @@ function ManageSingleElection() {
   const [newVoter, setNewVoter] = useState('');
   const [newCandidate, setNewCandidate] = useState('');
   const [isElectionNameVerified, setIsElectionNameVerified] = useState(false);
+  const [description, setDescription] = useState('');
+
 
   useEffect(() => {
     const fetchElectionData = async () => {
@@ -28,6 +30,7 @@ function ManageSingleElection() {
         const { data } = await axios.get(`http://localhost:5000/api/elections/one/${id}`);
         setElection(data);
         setElectionName(data.electionName);
+        setDescription(data.description); 
         setStartTime(data.startTime);
         setEndTime(data.endTime);
         setVoters(data.voterLists);
@@ -184,6 +187,7 @@ function ManageSingleElection() {
           updatedFields: {
             electionName,
             startTime,
+            description,
             endTime,
             voterLists: updatedVoters,
             candidateLists: updatedCandidates
@@ -267,6 +271,16 @@ function ManageSingleElection() {
         />
         <button onClick={verifyElectionName} className="bg-blue-500 text-white px-4 py-2 ml-2 rounded">Verify</button>
       </div>
+      <div className="mb-5">
+  <label className="text-xl">Description:</label>
+  <textarea
+    value={description}
+    onChange={(e) => setDescription(e.target.value)}
+    className="w-full mt-2 p-2 text-black rounded"
+    rows="5"
+    placeholder="Enter election description"
+  ></textarea>
+</div>
 
       {/* Start Time, End Time, Voters, Candidates Sections go here */}
       <div className="mb-5">

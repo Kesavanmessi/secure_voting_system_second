@@ -244,12 +244,13 @@ router.get('/one/:id', async (req, res) => {
 
 // Update election details by ID
 router.put('/one/:id', async (req, res) => {
-  const { electionName, startTime, endTime, voters, candidates } = req.body;
+  const { electionName, startTime, endTime, voters, candidates , description} = req.body;
 
   try {
     const updatedElection = await Election.findByIdAndUpdate(
       req.params.id,
-      { electionName, startTime, endTime, voterLists : voters, candidateLists : candidates },
+      { electionName,
+        description , startTime, endTime, voterLists : voters, candidateLists : candidates },
       { new: true, runValidators: true }
     );
 
@@ -509,11 +510,85 @@ router.get('/difference/:id', async (req, res) => {
 });
 
 
+// Fetch finished elections
+router.get('/finished', async (req, res) => {
+  try {
+    const finishedElections = await Election.find({ 
+      endTime: { $lt: new Date() }
+    });
+    res.status(200).json(finishedElections);
+  } catch (error) {
+    console.error('Error fetching finished elections:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+// Fetch election results
+router.get('/results/:id', async (req, res) => {
+  const { id: electionId } = req.params;
+
+  try {
+    // Find the election by ID
+    const election = await Election.findById(electionId);
+    if (!election) {
+      return res.status(404).json({ success: false, message: 'Election not found.' });
+    }
+
+    const { candidateLists } = election;
+
+    // Fetch all candidates from the candidateLists
+    const candidateData = [];
+    for (const listName of candidateLists) {
+      const candidateList = await Candidate.findOne({ listname: listName });
+      if (candidateList && candidateList.candidates) {
+        candidateData.push(...candidateList.candidates);
+      }
+    }
+    // Fetch the encrypted vote counts from ElectionCandidates
+    const electionCandidates = await ElectionCandidates.findOne({ electionId });
+    if (!electionCandidates) {
+      return res.status(404).json({ success: false, message: 'Election candidates not found.' });
+    }
+
+    // Combine candidate data with vote counts
+    const candidates = electionCandidates.candidates.map(candidate => {
+      const candidateInfo = candidateData.find(c => c.candidateId === candidate.candidateId);
+      return {
+        name: candidateInfo?.candidateName || 'None of the above',
+        party: candidateInfo?.party || 'Nota',
+        votes: decryptVoteCount(candidate.voteCount), 
+      };
+    });
+    res.status(200).json({ success: true, candidates });
+  } catch (error) {
+    console.error('Error fetching election results:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+router.post('/publish/:id', async (req, res) => {
+  const { id: electionId } = req.params;
+
+  try {
+    const updatedElection = await Election.findByIdAndUpdate(
+      electionId,
+      { isResultPublished: true },
+      { new: true }
+    );
+
+    if (!updatedElection) {
+      return res.status(404).json({ success: false, message: 'Election not found.' });
+    }
+
+    res.status(200).json({ success: true, message: 'Results published successfully.', election: updatedElection });
+  } catch (error) {
+    console.error('Error publishing results:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
 
 
-
-
-//login side starting
+//voter side starting
 
 
 
@@ -532,22 +607,28 @@ router.post('/voter-login', async (req, res) => {
     const voterListNames = election.voterLists || [];
 
     // Step 3: Search for the voter in the voter lists
-    const voterList = await Voter.findOne({ listname: { $in: voterListNames } });
-    if (!voterList) {
-      return res.status(404).json({ success: false, message: 'Voter list not found' });
-    }
+    const voterLists = await Voter.find({ listname: { $in: voterListNames } });
+if (!voterLists || voterLists.length === 0) {
+  return res.status(404).json({ success: false, message: 'No voter list found' });
+}
 
-    // Step 4: Check if the voter exists in the voter list
-    const voterFound = voterList.voters.find((voter) => voter.voterId === voterId);
-    if (!voterFound) {
-      return res.status(200).json({ success: false, message: 'Voter not found in the list' });
-    }
+// Step 4: Check if the voter exists in any of the voter lists
+let voterFound = null;
+for (const list of voterLists) {
+  voterFound = list.voters.find((voter) => voter.voterId === voterId);
+  if (voterFound) break; // Exit the loop as soon as the voter is found
+}
 
-    // Step 5: Verify password
-    const isPasswordValid = voterFound.password === password;
-    if (!isPasswordValid) {
-      return res.status(200).json({ success: false, message: 'Invalid password' });
-    }
+if (!voterFound) {
+  return res.status(200).json({ success: false, message: 'Voter not found in the list' });
+}
+
+// Step 5: Verify password
+const isPasswordValid = voterFound.password === password;
+if (!isPasswordValid) {
+  return res.status(200).json({ success: false, message: 'Invalid password' });
+}
+
     const currTime = new Date();
     // Step 6: Check voting status in ElectionVoters
     if(currTime >= election.startTime && currTime <= election.endTime){
@@ -616,7 +697,11 @@ router.post('/electionCandidates-details', async (req, res) => {
     const uniqueCandidates = Array.from(
       new Map(allCandidates.map(candidate => [candidate.candidateId, candidate])).values()
     );
-
+    uniqueCandidates.push({
+      'candidateId' : 'C1NOTA2',
+      'candidateName' : 'None of the above',
+      'party':'NOTA'
+    })
     res.status(200).json({
       success: true,
       candidates: uniqueCandidates.map(candidate => ({

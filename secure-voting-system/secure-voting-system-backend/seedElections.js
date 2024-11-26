@@ -12,11 +12,12 @@ const seedElectionData = async () => {
   const elections = [
     {
       electionName: "General Election 2024",
-      createdBy: "admin1",
-      voterLists: ["General Election 2024"],  // Voter list names
-      candidateLists: ["General Election 2024"],  // Candidate list names
-      startTime: new Date("2024-10-01T08:00:00"),
-      endTime: new Date("2024-10-02T20:00:00"),
+      createdBy: "kesavan",
+      approvedBy:"kesavan",
+      voterLists: ["General Election 2024","Election 2024"],  // Voter list names
+      candidateLists: ["General Election 2024" , "Election 2024"],  // Candidate list names
+      startTime: new Date("2024-11-26T11:45:00"),
+      endTime: new Date("2024-11-26T11:50:00"),
       isResultPublished: false
     }
   ];
