@@ -11,7 +11,7 @@ export const AuthProvider = ({ children }) => {
     const { username, role, id } = adminData;
     const adminDetails = { username, role, id }; // Store necessary details
     setAdmin(adminDetails);
-    localStorage.setItem("admin", JSON.stringify(adminDetails));
+    localStorage.setItem("secureVoting_admin", JSON.stringify(adminDetails));
   };
 
   // Function to save voter info after login
@@ -20,37 +20,53 @@ export const AuthProvider = ({ children }) => {
     const voterDetails = {
       voterId,
       voterName,
+      role: "Voter",
       address,
       age,
       eligibility: "Eligible to Vote",
       electionDetails,
     };
     setVoter(voterDetails);
-    localStorage.setItem("voter", JSON.stringify(voterDetails));
+    localStorage.setItem("secureVoting_voter", JSON.stringify(voterDetails));
   };
-  
+
   // Logout admin
   const logoutAdmin = () => {
     setAdmin(null);
-    localStorage.removeItem("admin");
+    localStorage.removeItem("secureVoting_admin");
   };
 
   // Logout voter
   const logoutVoter = () => {
     setVoter(null);
-    localStorage.removeItem("voter");
+    localStorage.removeItem("secureVoting_voter");
   };
 
   // Retrieve from local storage if refreshed
   useEffect(() => {
-    const storedAdmin = JSON.parse(localStorage.getItem("admin"));
-    const storedVoter = JSON.parse(localStorage.getItem("voter"));
-    if (storedAdmin) setAdmin(storedAdmin);
-    if (storedVoter) setVoter(storedVoter);
+    try {
+      const storedAdmin = JSON.parse(localStorage.getItem("secureVoting_admin"));
+      const storedVoter = JSON.parse(localStorage.getItem("secureVoting_voter"));
+      if (storedAdmin) setAdmin(storedAdmin);
+      if (storedVoter) setVoter(storedVoter);
+    } catch (error) {
+      console.error("Error parsing stored data:", error);
+      localStorage.removeItem("secureVoting_admin");
+      localStorage.removeItem("secureVoting_voter");
+    }
   }, []);
 
   return (
-    <AuthContext.Provider value={{ admin, voter, loginAdmin, loginVoter, logoutAdmin, logoutVoter }}>
+    <AuthContext.Provider
+      value={{
+        admin,
+        voter,
+        loginAdmin,
+        loginVoter,
+        logoutAdmin,
+        logoutVoter,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

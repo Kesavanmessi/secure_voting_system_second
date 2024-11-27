@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const router = express.Router();
+const ElectionEnded = require('../models/ElectionEnded');
 const Admin = require('../models/Admin'); // Ensure paths are correct
 const Election = require('../models/Election');
 const PendingElection = require('../models/PendingElection')
@@ -566,23 +567,88 @@ router.get('/results/:id', async (req, res) => {
   }
 });
 
-router.post('/publish/:id', async (req, res) => {
+router.post('/move-to-finished/:id', async (req, res) => {
   const { id: electionId } = req.params;
 
   try {
-    const updatedElection = await Election.findByIdAndUpdate(
-      electionId,
-      { isResultPublished: true },
-      { new: true }
-    );
-
-    if (!updatedElection) {
+    // Fetch election details
+    const election = await Election.findById(electionId);
+    if (!election) {
       return res.status(404).json({ success: false, message: 'Election not found.' });
     }
 
-    res.status(200).json({ success: true, message: 'Results published successfully.', election: updatedElection });
+    // Fetch voters details
+    const electionVoters = await ElectionVoters.findOne({ electionId });
+    if (!electionVoters) {
+      return res.status(404).json({ success: false, message: 'Election voters data not found.' });
+    }
+
+    // Fetch candidates details
+    const electionCandidates = await ElectionCandidates.findOne({ electionId });
+    if (!electionCandidates) {
+      return res.status(404).json({ success: false, message: 'Election candidates data not found.' });
+    }
+
+    // Fetch candidate data
+    const candidateListNames = election.candidateLists || [];
+    const candidateData = await Candidate.find({ listname: { $in: candidateListNames } });
+
+    // Process candidates and decrypt vote counts
+    const candidatesToSave = await Promise.all(
+      electionCandidates.candidates.map(async (candidate) => {
+        const candidateDetails = candidateData
+          .flatMap((list) => list.candidates)
+          .find((c) => c.candidateId === candidate.candidateId);
+        return {
+          candidateId: candidate.candidateId,
+          name: candidateDetails?.candidateName || 'None of the above',
+          party: candidateDetails?.party || 'NOTA',
+          votes: decryptVoteCount(candidate.voteCount),
+        };
+      })
+    );
+
+    // Determine winner
+    const winner = candidatesToSave.reduce((prev, current) =>
+      prev.votes > current.votes ? prev : current
+    );
+
+    // Populate voter participation details
+    const votersParticipated = electionVoters.voters.filter((voter) => voter.isVoted);
+    const votersNotParticipated = electionVoters.voters.filter((voter) => !voter.isVoted);
+
+    // Prepare the data for the `electionEnded` collection
+    const electionEndedData = {
+      electionId: election._id,
+      electionName: election.electionName,
+      startTime: election.startTime,
+      endTime: election.endTime,
+      votersParticipated: votersParticipated.map((voter) => voter.voterId),
+      votersNotParticipated: votersNotParticipated.map((voter) => voter.voterId),
+      candidates: candidatesToSave,
+      winner: {
+        candidateId: winner.candidateId,
+        name: winner.name || 'None of the above',
+        party: winner.party || 'NOTA',
+        votes: winner.votes,
+      },
+      createdBy: election.createdBy,
+    };
+
+    // Save to `electionEnded` collection
+    await new ElectionEnded(electionEndedData).save();
+
+    // Remove the election and associated data from other collections
+    await Promise.all([
+      Election.findByIdAndDelete(electionId),
+      ElectionVoters.deleteOne({ electionId }),
+      ElectionCandidates.deleteOne({ electionId }),
+      VoteLog.deleteMany({electionId})
+    ]);
+
+    res.status(200).json({ success: true, message: 'Election moved to finished successfully.' });
   } catch (error) {
-    console.error('Error publishing results:', error);
+    console.error('Error moving election to finished:', error);
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 });
