@@ -3,10 +3,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const Admin = require('./models/Admin'); // Adjust path as necessary
 
-mongoose.connect('mongodb://localhost:27017/secureVotingDB', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+mongoose.connect('mongodb://localhost:27017/secureVotingDB');
 
 const seedAdminData = async () => {
   const username = "kesavan2";

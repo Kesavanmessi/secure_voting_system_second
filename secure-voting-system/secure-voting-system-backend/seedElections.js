@@ -4,14 +4,15 @@ const Election = require('./models/Election');
 // Replace with your MongoDB connection URI
 const uri = 'mongodb://localhost:27017/secureVotingDB';
 
-mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(uri)
   .then(() => console.log('MongoDB connected for Election'))
   .catch(err => console.error('MongoDB connection error for Election:', err));
 
 const seedElectionData = async () => {
   const elections = [
     {
-      electionName: "General Election 2024",
+      electionName: "Election 2024",
+      description:"gkjerngntkjn",
       createdBy: "kesavan",
       approvedBy:"kesavan",
       voterLists: ["General Election 2024","Election 2024"],  // Voter list names

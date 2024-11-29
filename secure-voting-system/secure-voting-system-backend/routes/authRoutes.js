@@ -566,7 +566,49 @@ router.get('/results/:id', async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 });
+//set election as published result election
+router.post('/publish/:electionId', async (req, res) => {
+  const { electionId } = req.params;
 
+  try {
+    // Find the election by ID
+    const election = await Election.findById(electionId);
+
+    if (!election) {
+      return res.status(404).json({
+        success: false,
+        message: 'Election not found.',
+      });
+    }
+
+    // Check if the result is already published
+    if (election.isResultPublished) {
+      return res.status(400).json({
+        success: false,
+        message: 'Results are already published for this election.',
+      });
+    }
+
+    // Update the `isResultPublished` field to `true`
+    election.isResultPublished = true;
+    await election.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Election results published successfully.',
+    });
+  } catch (error) {
+    console.error('Error publishing election results:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'An error occurred while publishing election results.',
+      error: error.message,
+    });
+  }
+});
+
+
+//move election to finished election
 router.post('/move-to-finished/:id', async (req, res) => {
   const { id: electionId } = req.params;
 
@@ -623,6 +665,7 @@ router.post('/move-to-finished/:id', async (req, res) => {
       electionName: election.electionName,
       startTime: election.startTime,
       endTime: election.endTime,
+      description: election.description,
       votersParticipated: votersParticipated.map((voter) => voter.voterId),
       votersNotParticipated: votersNotParticipated.map((voter) => voter.voterId),
       candidates: candidatesToSave,

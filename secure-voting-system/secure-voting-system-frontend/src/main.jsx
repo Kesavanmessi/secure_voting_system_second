@@ -31,22 +31,13 @@ import './index.css';
 const ProtectedRoute = ({ element, allowedRoles, redirectPath = '/' }) => {
   const { admin, voter } = useContext(AuthContext);
 
-  // If the user is logged in as an admin, check admin roles
-  if (admin) {
-    return allowedRoles.includes(admin?.role)
-      ? element
-      : <Navigate to={redirectPath || '/admin-login'} />;
+  if (admin && allowedRoles.includes(admin.role)) {
+    return element;
   }
-
-  // If the user is logged in as a voter, allow voter access
-  if (voter) {
-    return allowedRoles.includes('Voter')
-      ? element
-      : <Navigate to={redirectPath || '/voter-login'} />;
+  if (voter && allowedRoles.includes('Voter')) {
+    return element;
   }
-
-  // If no user is logged in, redirect to home
-  return <Navigate to="/" />;
+  return <Navigate to={redirectPath} />;
 };
 
 // Main App Component

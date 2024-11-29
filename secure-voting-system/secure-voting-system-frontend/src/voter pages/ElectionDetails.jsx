@@ -113,10 +113,9 @@ function ElectionDetails() {
   return (
     <div className="bg-gray-800 p-10 text-white flex flex-col items-center">
       <h1 className="text-4xl mb-8">{electionDetails.electionName}</h1>
-
+      <p className="text-gray-400 text-lg mb-4">{electionDetails.description}</p>
       {!isOngoing && !isFinished && (
         <div>
-          <p className="text-gray-400 text-lg mb-4">{electionDetails.description}</p>
           <h2 className="text-2xl mb-4">Participating Candidates</h2>
           <ul className="list-disc mb-6">
             {candidates.map((candidate) => (
