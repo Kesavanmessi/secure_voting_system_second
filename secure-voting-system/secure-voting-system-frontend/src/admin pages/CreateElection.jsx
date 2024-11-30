@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext ,useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import AuthContext from '../context/AuthContext';
@@ -14,8 +14,29 @@ function CreateElection() {
   const [verifiedVoterLists, setVerifiedVoterLists] = useState([]);
   const [verifiedCandidateLists, setVerifiedCandidateLists] = useState([]);
   const [description, setDescription] = useState('');
+  const [availableVoterLists, setAvailableVoterLists] = useState([]);
+  const [availableCandidateLists, setAvailableCandidateLists] = useState([]);
   const { admin } = useContext(AuthContext);
   const navigate = useNavigate();
+  const action = "Last Action"
+  useEffect(() => {
+    const fetchLists = async () => {
+      try {
+        const [voterResponse, candidateResponse] = await Promise.all([
+          axios.get('http://localhost:5000/api/elections/voters/all-lists'),
+          axios.get('http://localhost:5000/api/elections/candidates/all-lists'),
+        ]);
+
+        setAvailableVoterLists(voterResponse.data.lists || []);
+        setAvailableCandidateLists(candidateResponse.data.lists || []);
+      } catch (error) {
+        console.error('Error fetching available lists:', error);
+        setMessage('Error loading voter and candidate lists.');
+      }
+    };
+
+    fetchLists();
+  }, []);
 
   const verifyElectionName = async () => {
     if(electionName.length < 8)
@@ -52,7 +73,7 @@ function CreateElection() {
       const response = await axios.post('http://localhost:5000/api/elections/voters/check-list', { voterListName });
       if (response.data.exists) {
         setVerifiedVoterLists((prev) => [...prev, voterListName]);
-        setMessage(`Voter list "${voterListName}" added successfully.`);
+        setMessage(`${action} Voter list "${voterListName}" added successfully.`);
         setVoterListName('');
       } else {
         setMessage(`No voter list found with the name "${voterListName}".`);
@@ -72,7 +93,7 @@ function CreateElection() {
       const response = await axios.post('http://localhost:5000/api/elections/candidates/check-list', { candidateListName });
       if (response.data.exists) {
         setVerifiedCandidateLists((prev) => [...prev, candidateListName]);
-        setMessage(`Candidate list "${candidateListName}" added successfully.`);
+        setMessage(`${action} Candidate list "${candidateListName}" added successfully.`);
         setCandidateListName('');
       } else {
         setMessage("No candidate list found with this name.");
@@ -137,6 +158,9 @@ function CreateElection() {
       setMessage("Error creating election. Please try again.");
     }
   };
+  const handleBack = () => {
+    if (step > 1) setStep((prevStep) => prevStep - 1);
+  };
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col justify-center items-center">
@@ -193,8 +217,23 @@ function CreateElection() {
         {/* Step 2: Add Multiple Voter Lists */}
         {step === 2 && (
           <>
+            <button
+              type="button"
+              onClick={handleBack}
+              className="bg-gray-500 p-2 rounded-lg w-full mb-3"
+            >
+              Back
+            </button>
             <div className="mb-5">
-              <label htmlFor="voter-list" className="text-lg">Voter List Collection Name:</label>
+            <div className="flex-1">
+              <h3 className="text-xl text-blue-400 mb-3">Available Voter Lists:</h3>
+              <ul className="list-disc pl-5 text-white max-h-40 overflow-auto border p-2 rounded mb-4">
+                {availableVoterLists.map((list, index) => (
+                  <li key={index}>{list}</li>
+                ))}
+              </ul>
+            </div>
+              <label htmlFor="voter-list" className="text-lg">Enter Voter List Collection Name:</label>
               <input
                 id="voter-list"
                 type="text"
@@ -223,8 +262,23 @@ function CreateElection() {
         {/* Step 3: Add Multiple Candidate Lists */}
         {step === 3 && (
           <>
+           <button
+              type="button"
+              onClick={handleBack}
+              className="bg-gray-500 p-2 rounded-lg w-full mb-3"
+            >
+              Back
+            </button>
             <div className="mb-5">
-              <label htmlFor="candidate-list" className="text-lg">Candidate List Collection Name:</label>
+            <div className="flex-1">
+              <h3 className="text-xl text-blue-400 mb-3">Available Candidate Lists:</h3>
+              <ul className="list-disc pl-5 text-white max-h-40 overflow-auto border p-2 rounded mb-4">
+                {availableCandidateLists.map((list, index) => (
+                  <li key={index}>{list}</li>
+                ))}
+              </ul>
+            </div>
+              <label htmlFor="candidate-list" className="text-lg">Enter Candidate List Collection Name:</label>
               <input
                 id="candidate-list"
                 type="text"
@@ -253,6 +307,13 @@ function CreateElection() {
         {/* Step 4: Select Start and End Time */}
         {step === 4 && (
           <>
+            <button
+              type="button"
+              onClick={handleBack}
+              className="bg-gray-500 p-2 rounded-lg w-full mb-3"
+            >
+              Back
+            </button>
             <div className="mb-5">
               <label htmlFor="start-time" className="text-lg">Start Time:</label>
               <input

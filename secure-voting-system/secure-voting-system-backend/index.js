@@ -1,6 +1,7 @@
 const express = require('express');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
+const adminRoutes = require('./routes/adminRoutes')
 const cors = require('cors'); 
 
 // Import the scheduler
@@ -17,7 +18,7 @@ app.use(express.json()); // Enables JSON body parsing
 
 // Mount auth routes
 app.use('/api/elections', authRoutes);  // <-- This must match the path in the frontend
-
+app.use('/api/admins',adminRoutes);
 // Start the scheduler after DB connection
 startScheduler(); // This will initialize the scheduler and start it in the background
 

@@ -78,6 +78,35 @@ router.post('/verify-name', async (req, res) => {
   }
 });
 
+
+// Endpoint to fetch all voter lists
+router.get('/voters/all-lists', async (req, res) => {
+  try {
+    const voterLists = await Voter.find({}, { listname: 1, _id: 0 }); // Retrieve only the `listname` field
+    const lists = voterLists.map((voterList) => voterList.listname); // Extract `listname` values into an array
+
+    res.status(200).json({ success: true, lists });
+  } catch (error) {
+    console.error('Error fetching voter lists:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch voter lists', error: error.message });
+  }
+});
+
+
+// Endpoint to fetch all candidate lists
+router.get('/candidates/all-lists', async (req, res) => {
+  try {
+    const candidateLists = await Candidate.find({}, { listname: 1, _id: 0 }); // Retrieve only the `listname` field
+    const lists = candidateLists.map((candidateList) => candidateList.listname); // Extract `listname` values into an array
+
+    res.status(200).json({ success: true, lists });
+  } catch (error) {
+    console.error('Error fetching candidate lists:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch candidate lists', error: error.message });
+  }
+});
+
+//checking voter list is present or not
 router.post('/voters/check-list', async (req, res) => {
   const { voterListName } = req.body;
   try {
