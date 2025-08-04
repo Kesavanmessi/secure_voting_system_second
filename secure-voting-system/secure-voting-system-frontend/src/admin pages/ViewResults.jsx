@@ -10,6 +10,7 @@ function ViewResults() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState(null);
   const [messageType, setMessageType] = useState('success'); // success or error
+  const [winner, setWinner] = useState(null); // Store the winner information
 
   useEffect(() => {
     const fetchFinishedElections = async () => {
@@ -39,6 +40,7 @@ function ViewResults() {
   const toggleResults = async (election) => {
     if (selectedElection && selectedElection._id === election._id) {
       setSelectedElection(null);
+      setWinner(null);
       return;
     }
 
@@ -47,10 +49,14 @@ function ViewResults() {
       const resultData = response.data;
 
       if (resultData.success) {
+        const winner = resultData.candidates.reduce((prev, current) => 
+          prev.votes > current.votes ? prev : current
+        );
         setSelectedElection({
           ...election,
           candidates: resultData.candidates,
         });
+        setWinner(winner);
         showMessage(`Displaying results for ${election.electionName}`, 'success');
       } else {
         showMessage('Failed to fetch election results.', 'error');
@@ -169,6 +175,11 @@ function ViewResults() {
         {selectedElection && (
           <div className="mt-10 text-center">
             <h2 className="text-3xl mb-4">Results for {selectedElection.electionName}</h2>
+            {winner && (
+              <p className="text-2xl text-yellow-400 mb-4">
+                Winner: {winner.name} ({winner.party}) with {winner.votes} votes
+              </p>
+            )}
             <table className="table-auto w-full text-center border-collapse border border-gray-600">
               <thead>
                 <tr>

@@ -16,7 +16,6 @@ const seedAdminData = async () => {
     password,
     role,
   });
-
   await admin.save();
   console.log("Admin data seeded successfully");
 };

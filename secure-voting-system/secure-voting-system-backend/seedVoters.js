@@ -16,21 +16,21 @@ const seedVotersData = async () => {
         {
           voterId: 'voter123',
           voterName: 'John Doe',
-          password: 'kesavan@123', // Store passwords securely in a real project
+          email: 'john.doe@example.com',
           address: '123 Main St',
           age: 30
         },
         {
           voterId: 'voter000',
           voterName: 'Jane Smith',
-          password: 'kesavan@123', // Store passwords securely in a real project
+          email: 'jane.smith@example.com',
           address: '456 Oak Ave',
           age: 25
         },
         {
           voterId: 'voter111',
           voterName: 'David Johnson',
-          password: 'kesavan@123', // Store passwords securely in a real project
+          email: 'david.johnson@example.com',
           address: '789 Pine Rd',
           age: 45
         }

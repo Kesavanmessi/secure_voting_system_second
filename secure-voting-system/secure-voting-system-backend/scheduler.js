@@ -5,6 +5,11 @@ const Candidate = require('./models/Candidates');
 const ElectionVoters = require('./models/ElectionVoters');
 const ElectionCandidates = require('./models/ElectionCandidates');
 const { encryptVoteCount } = require('./utils/encryption');
+const { 
+  sendElectionCreationEmail, 
+  sendElectionStartEmail, 
+  sendElectionEndEmail 
+} = require('./utils/emailService');
 
 // Scheduler logic
 const startScheduler = () => {
@@ -23,6 +28,7 @@ const startScheduler = () => {
         console.log(`Processing election: ${election.electionName}`);
         const existingVoterDocument = await ElectionVoters.findOne({ electionId: election._id });
         const existingCandidateDocument = await ElectionCandidates.findOne({ electionId: election._id });
+        
         if (!existingVoterDocument) {
           // Populate ElectionVoters
           const voterLists = election.voterLists || [];
@@ -34,16 +40,33 @@ const startScheduler = () => {
             return acc;
           }, []);
           const uniqueVoters = Array.from(new Map(votersToAdd.map(v => [v.voterId, v])).values());
+          
           if (uniqueVoters.length > 0) {
             await new ElectionVoters({
               electionId: election._id,
               voters: uniqueVoters,
             }).save();
             console.log(`Voters populated for election: ${election.electionName}`);
+            
+            // Send election creation emails to all voters
+            for (const voterList of voterListsData) {
+              if (voterList) {
+                for (const voter of voterList.voters) {
+                  await sendElectionCreationEmail(
+                    voter.email,
+                    voter.voterName,
+                    election.electionName,
+                    voter.voterId,
+                    voter.password // Add the random password
+                  );
+                }
+              }
+            }
           }
         } else {
           console.log(`Voters already populated for election: ${election.electionName}`);
         }
+        
         if (!existingCandidateDocument) {
           // Populate ElectionCandidates
           const candidateLists = election.candidateLists || [];
@@ -82,6 +105,55 @@ const startScheduler = () => {
           election.isPopulated = true;
           await election.save();
           console.log(`Election "${election.electionName}" marked as populated.`);
+          
+          // Send election start notification emails
+          const voterLists = election.voterLists || [];
+          const voterListPromises = voterLists.map(listName => Voter.findOne({ listname: listName }));
+          const voterListsData = await Promise.all(voterListPromises);
+          
+          for (const voterList of voterListsData) {
+            if (voterList) {
+              for (const voter of voterList.voters) {
+                await sendElectionStartEmail(
+                  voter.email,
+                  voter.voterName,
+                  election.electionName,
+                  election.startTime,
+                  election.endTime
+                );
+              }
+            }
+          }
+        }
+      }
+
+      // Check for elections that just ended and send end notifications
+      const electionsJustEnded = await Election.find({
+        endTime: { 
+          $gte: new Date(now.getTime() - 60000), // Within last minute
+          $lte: now 
+        },
+        isPopulated: true
+      });
+
+      for (const election of electionsJustEnded) {
+        console.log(`Election "${election.electionName}" just ended, sending notifications...`);
+        
+        // Send election end notification emails
+        const voterLists = election.voterLists || [];
+        const voterListPromises = voterLists.map(listName => Voter.findOne({ listname: listName }));
+        const voterListsData = await Promise.all(voterListPromises);
+        
+        for (const voterList of voterListsData) {
+          if (voterList) {
+            for (const voter of voterList.voters) {
+              await sendElectionEndEmail(
+                voter.email,
+                voter.voterName,
+                election.electionName
+              );
+            }
+          }
         }
       }
     } catch (error) {

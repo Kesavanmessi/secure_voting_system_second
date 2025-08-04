@@ -8,6 +8,9 @@ const PendingElection = require('../models/PendingElection')
 const PendingElectionForModifications = require('../models/PendingElectionForModifications')
 const Voter = require('../models/Voters');
 const Candidate = require('../models/Candidates');
+const PendingVoterList = require('../models/PendingVoterList');
+const PendingCandidateList = require('../models/PendingCandidateList');
+const OTP = require('../models/OTP');
 const bcrypt = require('bcrypt'); 
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
@@ -18,6 +21,25 @@ const ElectionCandidates = require('../models/ElectionCandidates'); // Collectio
 const ElectionVoters = require('../models/ElectionVoters'); // Collection to track voters in elections
 const VoteLog = require('../models/VoteLog');
 const {encryptVoteCount , decryptVoteCount} = require('../utils/encryption')
+const { generateOTP, sendOTPEmail } = require('../utils/emailService');
+
+// Function to generate random password
+const generateRandomPassword = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+  let password = '';
+  for (let i = 0; i < 12; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+};
+
+// Function to generate unique request ID
+const generateRequestId = (type) => {
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 1000);
+  return `${type.toUpperCase()}_${timestamp}_${random}`;
+};
+
 // POST /api/auth/admin-login
 router.post('/admin-login', async (req, res) => {
   const { username, password } = req.body;
@@ -726,11 +748,274 @@ router.post('/move-to-finished/:id', async (req, res) => {
 });
 
 
+//managing lists api
+
+router.post("/voters/create", async (req, res) => {
+  const { listname, voters } = req.body;
+  const adminToken = req.headers.authorization?.split(' ')[1];
+
+  try {
+    // Verify admin token and get admin info
+    const decoded = jwt.verify(adminToken, process.env.JWT_SECRET);
+    const admin = await Admin.findById(decoded.id);
+    
+    if (!admin) {
+      return res.status(401).json({ success: false, message: "Unauthorized access" });
+    }
+
+    const existingList = await Voter.findOne({ listname });
+    if (existingList) {
+      return res.status(400).json({ success: false, message: "Voter list already exists." });
+    }
+
+    // Validate that all voters have email addresses
+    for (const voter of voters) {
+      if (!voter.email) {
+        return res.status(400).json({ 
+          success: false, 
+          message: `Email is required for voter ${voter.voterName || voter.voterId}` 
+        });
+      }
+    }
+
+    // Check if admin is Head Admin
+    if (admin.role === 'Head Admin') {
+      // Head Admin can create directly
+      const votersWithPasswords = voters.map(voter => ({
+        ...voter,
+        password: generateRandomPassword()
+      }));
+
+      const newList = new Voter({
+        listname,
+        voters: votersWithPasswords,
+      });
+      await newList.save();
+
+      res.status(201).json({ 
+        success: true, 
+        message: "Voter list created successfully with random passwords generated.",
+        voters: votersWithPasswords.map(voter => ({
+          voterId: voter.voterId,
+          voterName: voter.voterName,
+          email: voter.email,
+          password: voter.password
+        }))
+      });
+    } else {
+      // Other admins need to submit for approval
+      const requestId = generateRequestId('voter');
+      
+      const pendingRequest = new PendingVoterList({
+        requestId,
+        requestedBy: {
+          adminId: admin.adminId,
+          username: admin.username,
+          role: admin.role
+        },
+        listname,
+        voters
+      });
+      
+      await pendingRequest.save();
+
+      res.status(202).json({ 
+        success: true, 
+        message: "Voter list request submitted for Head Admin approval.",
+        requestId,
+        status: 'pending'
+      });
+    }
+  } catch (error) {
+    console.error("Error creating voter list:", error);
+    res.status(500).json({ success: false, message: "Failed to create voter list." });
+  }
+});
+
+// Create a new candidate list
+router.post("/candidates/create", async (req, res) => {
+  const { listname, candidates } = req.body;
+  const adminToken = req.headers.authorization?.split(' ')[1];
+
+  try {
+    // Verify admin token and get admin info
+    const decoded = jwt.verify(adminToken, process.env.JWT_SECRET);
+    const admin = await Admin.findById(decoded.id);
+    
+    if (!admin) {
+      return res.status(401).json({ success: false, message: "Unauthorized access" });
+    }
+
+    const existingList = await Candidate.findOne({ listname });
+    if (existingList) {
+      return res.status(400).json({ success: false, message: "Candidate list already exists." });
+    }
+
+    // Check if admin is Head Admin
+    if (admin.role === 'Head Admin') {
+      // Head Admin can create directly
+      const newList = new Candidate({
+        listname,
+        candidates,
+      });
+      await newList.save();
+
+      res.status(201).json({ success: true, message: "Candidate list created successfully." });
+    } else {
+      // Other admins need to submit for approval
+      const requestId = generateRequestId('candidate');
+      
+      const pendingRequest = new PendingCandidateList({
+        requestId,
+        requestedBy: {
+          adminId: admin.adminId,
+          username: admin.username,
+          role: admin.role
+        },
+        listname,
+        candidates
+      });
+      
+      await pendingRequest.save();
+
+      res.status(202).json({ 
+        success: true, 
+        message: "Candidate list request submitted for Head Admin approval.",
+        requestId,
+        status: 'pending'
+      });
+    }
+  } catch (error) {
+    console.error("Error creating candidate list:", error);
+    res.status(500).json({ success: false, message: "Failed to create candidate list." });
+  }
+});
+
+// Fetch all voter and candidate lists
+router.get('/all', async (req, res) => {
+  try {
+    const voterLists = await Voter.find({}, 'listname');
+    const candidateLists = await Candidate.find({}, 'listname');
+    console.log(voterLists);
+    res.status(200).json({
+      voterLists: voterLists.map((list) => ({ _id: list._id, listname: list.listname })),
+      candidateLists: candidateLists.map((list) => ({ _id: list._id, listname: list.listname })),
+    });
+  } catch (error) {
+    console.error('Error fetching lists:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch lists.' });
+  }
+});
+
+// Create new voter or candidate list
+router.post('/:type/create', async (req, res) => {
+  const { type } = req.params;
+  const { listname, items } = req.body;
+
+  if (!listname || !items || items.length < 2) {
+    return res.status(400).json({ success: false, message: 'List name and at least 2 items are required.' });
+  }
+
+  try {
+    if (type === 'voters') {
+      const existingList = await Voter.findOne({ listname });
+      if (existingList) {
+        return res.status(400).json({ success: false, message: 'Voter list with this name already exists.' });
+      }
+
+      const newVoterList = new Voter({ listname, voters: items });
+      await newVoterList.save();
+    } else if (type === 'candidates') {
+      const existingList = await Candidate.findOne({ listname });
+      if (existingList) {
+        return res.status(400).json({ success: false, message: 'Candidate list with this name already exists.' });
+      }
+
+      const newCandidateList = new Candidate({ listname, candidates: items });
+      await newCandidateList.save();
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid list type.' });
+    }
+
+    res.status(201).json({ success: true, message: `${type === 'voters' ? 'Voter' : 'Candidate'} list created successfully.` });
+  } catch (error) {
+    console.error('Error creating list:', error);
+    res.status(500).json({ success: false, message: 'Failed to create list.' });
+  }
+});
+
+// Update voter or candidate list
+router.put('/:type/update/:id', async (req, res) => {
+  const { type, id } = req.params;
+  const { listname, items } = req.body;
+
+  if (!listname || !items || items.length < 2) {
+    return res.status(400).json({ success: false, message: 'List name and at least 2 items are required.' });
+  }
+
+  try {
+    if (type === 'voters') {
+      const existingList = await Voter.findById(id);
+      if (!existingList) {
+        return res.status(404).json({ success: false, message: 'Voter list not found.' });
+      }
+
+      existingList.listname = listname;
+      existingList.voters = items;
+      await existingList.save();
+    } else if (type === 'candidates') {
+      const existingList = await Candidate.findById(id);
+      if (!existingList) {
+        return res.status(404).json({ success: false, message: 'Candidate list not found.' });
+      }
+
+      existingList.listname = listname;
+      existingList.candidates = items;
+      await existingList.save();
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid list type.' });
+    }
+
+    res.status(200).json({ success: true, message: `${type === 'voters' ? 'Voter' : 'Candidate'} list updated successfully.` });
+  } catch (error) {
+    console.error('Error updating list:', error);
+    res.status(500).json({ success: false, message: 'Failed to update list.' });
+  }
+});
+
+// Delete voter or candidate list
+router.delete('/:type/delete/:id', async (req, res) => {
+  const { type, id } = req.params;
+
+  try {
+    if (type === 'voters') {
+      const deletedList = await Voter.findByIdAndDelete(id);
+      if (!deletedList) {
+        return res.status(404).json({ success: false, message: 'Voter list not found.' });
+      }
+    } else if (type === 'candidates') {
+      const deletedList = await Candidate.findByIdAndDelete(id);
+      if (!deletedList) {
+        return res.status(404).json({ success: false, message: 'Candidate list not found.' });
+      }
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid list type.' });
+    }
+
+    res.status(200).json({ success: true, message: `${type === 'voters' ? 'Voter' : 'Candidate'} list deleted successfully.` });
+  } catch (error) {
+    console.error('Error deleting list:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete list.' });
+  }
+});
+
+
+
 //voter side starting
 
 
 
-// Voter Login Endpoint
+// Voter Login Endpoint - Step 1: Verify election and voter
 router.post('/voter-login', async (req, res) => {
   const { electionName, voterId, password } = req.body;
 
@@ -746,50 +1031,67 @@ router.post('/voter-login', async (req, res) => {
 
     // Step 3: Search for the voter in the voter lists
     const voterLists = await Voter.find({ listname: { $in: voterListNames } });
-if (!voterLists || voterLists.length === 0) {
-  return res.status(404).json({ success: false, message: 'No voter list found' });
-}
+    if (!voterLists || voterLists.length === 0) {
+      return res.status(404).json({ success: false, message: 'No voter list found' });
+    }
 
-// Step 4: Check if the voter exists in any of the voter lists
-let voterFound = null;
-for (const list of voterLists) {
-  voterFound = list.voters.find((voter) => voter.voterId === voterId);
-  if (voterFound) break; // Exit the loop as soon as the voter is found
-}
+    // Step 4: Check if the voter exists in any of the voter lists
+    let voterFound = null;
+    for (const list of voterLists) {
+      voterFound = list.voters.find((voter) => voter.voterId === voterId);
+      if (voterFound) break; // Exit the loop as soon as the voter is found
+    }
 
-if (!voterFound) {
-  return res.status(200).json({ success: false, message: 'Voter not found in the list' });
-}
+    if (!voterFound) {
+      return res.status(200).json({ success: false, message: 'Voter not found in the list' });
+    }
 
-// Step 5: Verify password
-const isPasswordValid = voterFound.password === password;
-if (!isPasswordValid) {
-  return res.status(200).json({ success: false, message: 'Invalid password' });
-}
+    // Step 5: Verify password
+    const isPasswordValid = voterFound.password === password;
+    if (!isPasswordValid) {
+      return res.status(200).json({ success: false, message: 'Invalid password' });
+    }
 
     const currTime = new Date();
     // Step 6: Check voting status in ElectionVoters
     if(currTime >= election.startTime && currTime <= election.endTime){
-    const votersDoc = await ElectionVoters.findOne({ electionId: election._id });
-    if (!votersDoc) {
-      return res.status(404).json({ success: false, message: 'Election voters data not found' });
+      const votersDoc = await ElectionVoters.findOne({ electionId: election._id });
+      if (!votersDoc) {
+        return res.status(404).json({ success: false, message: 'Election voters data not found' });
+      }
+
+      const voterStatus = votersDoc.voters.find((v) => v.voterId === voterId);
+      if (voterStatus && voterStatus.isVoted) {
+        return res.status(200).json({
+          success: false,
+          message: 'You have already voted. Access will be allowed only after the election finishes.',
+        });
+      }
     }
 
-    const voterStatus = votersDoc.voters.find((v) => v.voterId === voterId);
-    if (voterStatus && voterStatus.isVoted) {
-      return res.status(200).json({
-        success: false,
-        message: 'You have already voted. Access will be allowed only after the election finishes.',
-      });
-    }
-  }
-    // Step 7: Return success response with voter and election details
+    // Step 7: Generate and send OTP
+    const otp = generateOTP();
+    
+    // Save OTP to database
+    await new OTP({
+      voterId: voterFound.voterId,
+      electionId: election._id.toString(),
+      otp: otp,
+      email: voterFound.email
+    }).save();
+
+    // Send OTP email
+    await sendOTPEmail(voterFound.email, voterFound.voterName, otp);
+
+    // Step 8: Return success response indicating OTP sent
     res.status(200).json({
       success: true,
-      message: 'Login successful',
+      message: 'OTP sent to your email. Please check your email and enter the OTP.',
+      requiresOTP: true,
       voter: {
         voterId: voterFound.voterId,
         voterName: voterFound.voterName,
+        email: voterFound.email,
         address: voterFound.address,
         age: voterFound.age,
         electionDetails: {
@@ -797,12 +1099,76 @@ if (!isPasswordValid) {
           electionId: election._id,
           startTime: election.startTime,
           endTime: election.endTime,
-          description:election.description
+          description: election.description
         },
       },
     });
   } catch (error) {
     console.error('Error during voter login:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+});
+
+// Voter OTP Verification Endpoint
+router.post('/voter-verify-otp', async (req, res) => {
+  const { electionId, voterId, otp } = req.body;
+
+  try {
+    // Find the OTP record
+    const otpRecord = await OTP.findOne({
+      voterId: voterId,
+      electionId: electionId,
+      otp: otp
+    });
+
+    if (!otpRecord) {
+      return res.status(200).json({ 
+        success: false, 
+        message: 'Invalid OTP or OTP has expired' 
+      });
+    }
+
+    // Delete the used OTP
+    await OTP.findByIdAndDelete(otpRecord._id);
+
+    // Find voter details
+    const election = await Election.findById(electionId);
+    if (!election) {
+      return res.status(404).json({ success: false, message: 'Election not found' });
+    }
+
+    const voterLists = await Voter.find({ listname: { $in: election.voterLists } });
+    let voterFound = null;
+    for (const list of voterLists) {
+      voterFound = list.voters.find((voter) => voter.voterId === voterId);
+      if (voterFound) break;
+    }
+
+    if (!voterFound) {
+      return res.status(404).json({ success: false, message: 'Voter not found' });
+    }
+
+    // Return success response with voter and election details
+    res.status(200).json({
+      success: true,
+      message: 'OTP verified successfully. Login successful.',
+      voter: {
+        voterId: voterFound.voterId,
+        voterName: voterFound.voterName,
+        email: voterFound.email,
+        address: voterFound.address,
+        age: voterFound.age,
+        electionDetails: {
+          electionName: election.electionName,
+          electionId: election._id,
+          startTime: election.startTime,
+          endTime: election.endTime,
+          description: election.description
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Error during OTP verification:', error);
     res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 });
@@ -935,5 +1301,506 @@ router.post('/is-result-published', async (req, res) => {
 
 
 // Schedule the job to run every minute
+
+// Get all pending voter list requests (Head Admin only)
+router.get('/pending-voter-lists', async (req, res) => {
+  const adminToken = req.headers.authorization?.split(' ')[1];
+
+  try {
+    // Verify admin token and get admin info
+    const decoded = jwt.verify(adminToken, process.env.JWT_SECRET);
+    const admin = await Admin.findById(decoded.id);
+    
+    if (!admin || admin.role !== 'Head Admin') {
+      return res.status(403).json({ success: false, message: "Only Head Admin can view pending requests" });
+    }
+
+    const pendingRequests = await PendingVoterList.find({ status: 'pending' }).sort({ createdAt: -1 });
+    
+    res.status(200).json({
+      success: true,
+      pendingRequests
+    });
+  } catch (error) {
+    console.error("Error fetching pending voter lists:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch pending requests." });
+  }
+});
+
+// Get all pending candidate list requests (Head Admin only)
+router.get('/pending-candidate-lists', async (req, res) => {
+  const adminToken = req.headers.authorization?.split(' ')[1];
+
+  try {
+    // Verify admin token and get admin info
+    const decoded = jwt.verify(adminToken, process.env.JWT_SECRET);
+    const admin = await Admin.findById(decoded.id);
+    
+    if (!admin || admin.role !== 'Head Admin') {
+      return res.status(403).json({ success: false, message: "Only Head Admin can view pending requests" });
+    }
+
+    const pendingRequests = await PendingCandidateList.find({ status: 'pending' }).sort({ createdAt: -1 });
+    
+    res.status(200).json({
+      success: true,
+      pendingRequests
+    });
+  } catch (error) {
+    console.error("Error fetching pending candidate lists:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch pending requests." });
+  }
+});
+
+// Approve voter list request (Head Admin only)
+router.post('/approve-voter-list/:requestId', async (req, res) => {
+  const { requestId } = req.params;
+  const { reviewNotes } = req.body;
+  const adminToken = req.headers.authorization?.split(' ')[1];
+
+  try {
+    // Verify admin token and get admin info
+    const decoded = jwt.verify(adminToken, process.env.JWT_SECRET);
+    const admin = await Admin.findById(decoded.id);
+    
+    if (!admin || admin.role !== 'Head Admin') {
+      return res.status(403).json({ success: false, message: "Only Head Admin can approve requests" });
+    }
+
+    const pendingRequest = await PendingVoterList.findOne({ requestId });
+    if (!pendingRequest) {
+      return res.status(404).json({ success: false, message: "Request not found" });
+    }
+
+    if (pendingRequest.status !== 'pending') {
+      return res.status(400).json({ success: false, message: "Request has already been processed" });
+    }
+
+    // Check if list name already exists
+    const existingList = await Voter.findOne({ listname: pendingRequest.listname });
+    if (existingList) {
+      return res.status(400).json({ success: false, message: "Voter list with this name already exists" });
+    }
+
+    // Generate random passwords for all voters
+    const votersWithPasswords = pendingRequest.voters.map(voter => ({
+      ...voter,
+      password: generateRandomPassword()
+    }));
+
+    // Create the voter list
+    const newList = new Voter({
+      listname: pendingRequest.listname,
+      voters: votersWithPasswords,
+    });
+    await newList.save();
+
+    // Update pending request status
+    pendingRequest.status = 'approved';
+    pendingRequest.reviewedBy = {
+      adminId: admin.adminId,
+      username: admin.username,
+      role: admin.role
+    };
+    pendingRequest.reviewDate = new Date();
+    pendingRequest.reviewNotes = reviewNotes || 'Approved by Head Admin';
+    await pendingRequest.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Voter list request approved and created successfully",
+      voters: votersWithPasswords.map(voter => ({
+        voterId: voter.voterId,
+        voterName: voter.voterName,
+        email: voter.email,
+        password: voter.password
+      }))
+    });
+  } catch (error) {
+    console.error("Error approving voter list request:", error);
+    res.status(500).json({ success: false, message: "Failed to approve request." });
+  }
+});
+
+// Reject voter list request (Head Admin only)
+router.post('/reject-voter-list/:requestId', async (req, res) => {
+  const { requestId } = req.params;
+  const { reviewNotes } = req.body;
+  const adminToken = req.headers.authorization?.split(' ')[1];
+
+  try {
+    // Verify admin token and get admin info
+    const decoded = jwt.verify(adminToken, process.env.JWT_SECRET);
+    const admin = await Admin.findById(decoded.id);
+    
+    if (!admin || admin.role !== 'Head Admin') {
+      return res.status(403).json({ success: false, message: "Only Head Admin can reject requests" });
+    }
+
+    const pendingRequest = await PendingVoterList.findOne({ requestId });
+    if (!pendingRequest) {
+      return res.status(404).json({ success: false, message: "Request not found" });
+    }
+
+    if (pendingRequest.status !== 'pending') {
+      return res.status(400).json({ success: false, message: "Request has already been processed" });
+    }
+
+    // Update pending request status
+    pendingRequest.status = 'rejected';
+    pendingRequest.reviewedBy = {
+      adminId: admin.adminId,
+      username: admin.username,
+      role: admin.role
+    };
+    pendingRequest.reviewDate = new Date();
+    pendingRequest.reviewNotes = reviewNotes || 'Rejected by Head Admin';
+    await pendingRequest.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Voter list request rejected successfully"
+    });
+  } catch (error) {
+    console.error("Error rejecting voter list request:", error);
+    res.status(500).json({ success: false, message: "Failed to reject request." });
+  }
+});
+
+// Approve candidate list request (Head Admin only)
+router.post('/approve-candidate-list/:requestId', async (req, res) => {
+  const { requestId } = req.params;
+  const { reviewNotes } = req.body;
+  const adminToken = req.headers.authorization?.split(' ')[1];
+
+  try {
+    // Verify admin token and get admin info
+    const decoded = jwt.verify(adminToken, process.env.JWT_SECRET);
+    const admin = await Admin.findById(decoded.id);
+    
+    if (!admin || admin.role !== 'Head Admin') {
+      return res.status(403).json({ success: false, message: "Only Head Admin can approve requests" });
+    }
+
+    const pendingRequest = await PendingCandidateList.findOne({ requestId });
+    if (!pendingRequest) {
+      return res.status(404).json({ success: false, message: "Request not found" });
+    }
+
+    if (pendingRequest.status !== 'pending') {
+      return res.status(400).json({ success: false, message: "Request has already been processed" });
+    }
+
+    // Check if list name already exists
+    const existingList = await Candidate.findOne({ listname: pendingRequest.listname });
+    if (existingList) {
+      return res.status(400).json({ success: false, message: "Candidate list with this name already exists" });
+    }
+
+    // Create the candidate list
+    const newList = new Candidate({
+      listname: pendingRequest.listname,
+      candidates: pendingRequest.candidates,
+    });
+    await newList.save();
+
+    // Update pending request status
+    pendingRequest.status = 'approved';
+    pendingRequest.reviewedBy = {
+      adminId: admin.adminId,
+      username: admin.username,
+      role: admin.role
+    };
+    pendingRequest.reviewDate = new Date();
+    pendingRequest.reviewNotes = reviewNotes || 'Approved by Head Admin';
+    await pendingRequest.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Candidate list request approved and created successfully"
+    });
+  } catch (error) {
+    console.error("Error approving candidate list request:", error);
+    res.status(500).json({ success: false, message: "Failed to approve request." });
+  }
+});
+
+// Reject candidate list request (Head Admin only)
+router.post('/reject-candidate-list/:requestId', async (req, res) => {
+  const { requestId } = req.params;
+  const { reviewNotes } = req.body;
+  const adminToken = req.headers.authorization?.split(' ')[1];
+
+  try {
+    // Verify admin token and get admin info
+    const decoded = jwt.verify(adminToken, process.env.JWT_SECRET);
+    const admin = await Admin.findById(decoded.id);
+    
+    if (!admin || admin.role !== 'Head Admin') {
+      return res.status(403).json({ success: false, message: "Only Head Admin can reject requests" });
+    }
+
+    const pendingRequest = await PendingCandidateList.findOne({ requestId });
+    if (!pendingRequest) {
+      return res.status(404).json({ success: false, message: "Request not found" });
+    }
+
+    if (pendingRequest.status !== 'pending') {
+      return res.status(400).json({ success: false, message: "Request has already been processed" });
+    }
+
+    // Update pending request status
+    pendingRequest.status = 'rejected';
+    pendingRequest.reviewedBy = {
+      adminId: admin.adminId,
+      username: admin.username,
+      role: admin.role
+    };
+    pendingRequest.reviewDate = new Date();
+    pendingRequest.reviewNotes = reviewNotes || 'Rejected by Head Admin';
+    await pendingRequest.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Candidate list request rejected successfully"
+    });
+  } catch (error) {
+    console.error("Error rejecting candidate list request:", error);
+    res.status(500).json({ success: false, message: "Failed to reject request." });
+  }
+});
+
+// Get request status for non-Head Admin users
+router.get('/request-status/:requestId', async (req, res) => {
+  const { requestId } = req.params;
+  const adminToken = req.headers.authorization?.split(' ')[1];
+
+  try {
+    // Verify admin token and get admin info
+    const decoded = jwt.verify(adminToken, process.env.JWT_SECRET);
+    const admin = await Admin.findById(decoded.id);
+    
+    if (!admin) {
+      return res.status(401).json({ success: false, message: "Unauthorized access" });
+    }
+
+    // Check both voter and candidate pending requests
+    let pendingRequest = await PendingVoterList.findOne({ requestId });
+    let requestType = 'voter';
+    
+    if (!pendingRequest) {
+      pendingRequest = await PendingCandidateList.findOne({ requestId });
+      requestType = 'candidate';
+    }
+
+    if (!pendingRequest) {
+      return res.status(404).json({ success: false, message: "Request not found" });
+    }
+
+    // Only allow the requesting admin or Head Admin to view the status
+    if (admin.role !== 'Head Admin' && pendingRequest.requestedBy.adminId !== admin.adminId) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
+
+    res.status(200).json({
+      success: true,
+      requestType,
+      request: pendingRequest
+    });
+  } catch (error) {
+    console.error("Error fetching request status:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch request status." });
+  }
+});
+
+// Public View Endpoint - Allow voters to view live election details
+router.post('/public-view', async (req, res) => {
+  const { electionName, voterId, email, password, otp } = req.body;
+
+  try {
+    // Step 1: Find the election
+    const election = await Election.findOne({ electionName });
+    if (!election) {
+      return res.status(200).json({ success: false, message: 'Election not found' });
+    }
+
+    // Step 2: Find the voter in the election
+    const electionVoters = await ElectionVoters.findOne({ electionId: election._id });
+    if (!electionVoters) {
+      return res.status(200).json({ success: false, message: 'Voter not found in this election' });
+    }
+
+    const voterInElection = electionVoters.voters.find(v => v.voterId === voterId);
+    if (!voterInElection) {
+      return res.status(200).json({ success: false, message: 'Voter not found in this election' });
+    }
+
+    // Step 3: Find the voter details from voter lists
+    const voterLists = election.voterLists || [];
+    let voterFound = null;
+    
+    for (const listName of voterLists) {
+      const voterList = await Voter.findOne({ listname: listName });
+      if (voterList) {
+        const voter = voterList.voters.find(v => v.voterId === voterId);
+        if (voter) {
+          voterFound = voter;
+          break;
+        }
+      }
+    }
+
+    if (!voterFound) {
+      return res.status(200).json({ success: false, message: 'Voter details not found' });
+    }
+
+    // Step 4: Verify email
+    if (voterFound.email !== email) {
+      return res.status(200).json({ success: false, message: 'Invalid email address' });
+    }
+
+    // Step 5: Verify password
+    if (voterFound.password !== password) {
+      return res.status(200).json({ success: false, message: 'Invalid password' });
+    }
+
+    // Step 6: Verify OTP
+    const otpRecord = await OTP.findOne({ 
+      voterId: voterId, 
+      electionId: election._id.toString(), 
+      otp: otp 
+    });
+
+    if (!otpRecord) {
+      return res.status(200).json({ success: false, message: 'Invalid OTP or OTP has expired' });
+    }
+
+    // Step 7: Delete the OTP after successful verification
+    await OTP.findByIdAndDelete(otpRecord._id);
+
+    // Step 8: Get election candidates and their vote counts
+    const electionCandidates = await ElectionCandidates.findOne({ electionId: election._id });
+    if (!electionCandidates) {
+      return res.status(200).json({ success: false, message: 'Election candidates not found' });
+    }
+
+    // Step 9: Decrypt vote counts for display
+    const candidatesWithVotes = electionCandidates.candidates.map(candidate => ({
+      candidateId: candidate.candidateId,
+      voteCount: decryptVoteCount(candidate.voteCount)
+    }));
+
+    // Step 10: Check if voter has already voted
+    const voteLog = await VoteLog.findOne({ 
+      electionId: election._id.toString(), 
+      voterId: voterId 
+    });
+
+    const hasVoted = !!voteLog;
+
+    // Step 11: Return public view data
+    res.status(200).json({
+      success: true,
+      message: 'Public view access granted',
+      election: {
+        electionName: election.electionName,
+        description: election.description,
+        startTime: election.startTime,
+        endTime: election.endTime,
+        isActive: new Date() >= election.startTime && new Date() <= election.endTime
+      },
+      voter: {
+        voterId: voterFound.voterId,
+        voterName: voterFound.voterName,
+        email: voterFound.email
+      },
+      candidates: candidatesWithVotes,
+      hasVoted: hasVoted,
+      totalVotes: candidatesWithVotes.reduce((sum, candidate) => sum + candidate.voteCount, 0),
+      currentTime: new Date()
+    });
+
+  } catch (error) {
+    console.error('Error in public view:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Public View OTP Generation Endpoint
+router.post('/public-view-otp', async (req, res) => {
+  const { electionName, voterId, email, password } = req.body;
+
+  try {
+    // Step 1: Find the election
+    const election = await Election.findOne({ electionName });
+    if (!election) {
+      return res.status(200).json({ success: false, message: 'Election not found' });
+    }
+
+    // Step 2: Find the voter in the election
+    const electionVoters = await ElectionVoters.findOne({ electionId: election._id });
+    if (!electionVoters) {
+      return res.status(200).json({ success: false, message: 'Voter not found in this election' });
+    }
+
+    const voterInElection = electionVoters.voters.find(v => v.voterId === voterId);
+    if (!voterInElection) {
+      return res.status(200).json({ success: false, message: 'Voter not found in this election' });
+    }
+
+    // Step 3: Find the voter details from voter lists
+    const voterLists = election.voterLists || [];
+    let voterFound = null;
+    
+    for (const listName of voterLists) {
+      const voterList = await Voter.findOne({ listname: listName });
+      if (voterList) {
+        const voter = voterList.voters.find(v => v.voterId === voterId);
+        if (voter) {
+          voterFound = voter;
+          break;
+        }
+      }
+    }
+
+    if (!voterFound) {
+      return res.status(200).json({ success: false, message: 'Voter details not found' });
+    }
+
+    // Step 4: Verify email
+    if (voterFound.email !== email) {
+      return res.status(200).json({ success: false, message: 'Invalid email address' });
+    }
+
+    // Step 5: Verify password
+    if (voterFound.password !== password) {
+      return res.status(200).json({ success: false, message: 'Invalid password' });
+    }
+
+    // Step 6: Generate and send OTP
+    const otp = generateOTP();
+
+    // Save OTP to database
+    await new OTP({
+      voterId: voterFound.voterId,
+      electionId: election._id.toString(),
+      otp: otp,
+      email: voterFound.email
+    }).save();
+
+    // Send OTP email
+    await sendOTPEmail(voterFound.email, voterFound.voterName, otp);
+
+    res.status(200).json({
+      success: true,
+      message: 'OTP sent to your email for public view access',
+      requiresOTP: true
+    });
+
+  } catch (error) {
+    console.error('Error generating public view OTP:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
 
 module.exports = router;

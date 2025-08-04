@@ -6,6 +6,7 @@ import AuthContext, { AuthProvider } from './context/AuthContext';
 // Common Pages
 import DashBoard from './common pages/goto-dashboard.jsx';
 import Login from './common pages/Login.jsx';
+import PublicView from './common pages/PublicView.jsx';
 
 // Admin Pages
 import AdminDashboard from './admin pages/AdminDashboard.jsx';
@@ -16,6 +17,7 @@ import ViewResults from './admin pages/ViewResults.jsx';
 import AdminHome from './admin pages/AdminHome.jsx';
 import ManageAdmins from './admin pages/ManageAdmins.jsx';
 import RequestsForElection from './admin pages/RequestsForElection.jsx';
+import ManageLists from './admin pages/ManageLists.jsx';
 
 // Voter Pages
 import VoterDashboard from './voter pages/VoterDashboard.jsx';
@@ -50,6 +52,7 @@ const App = () => {
           <Route path="/" element={<DashBoard />} />
           <Route path="/admin-login" element={<Login login="Admin" />} />
           <Route path="/voter-login" element={<Login login="Voter" />} />
+          <Route path="/public-view" element={<PublicView />} />
 
           {/* Admin Dashboard Routes */}
           <Route
@@ -107,6 +110,12 @@ const App = () => {
               path="requests-for-election"
               element={
                 <ProtectedRoute element={<RequestsForElection />} allowedRoles={['Head Admin']} />
+              }
+            />
+            <Route
+              path="adding-lists"
+              element={
+                <ProtectedRoute element={<ManageLists />} allowedRoles={['Head Admin']} />
               }
             />
           </Route>

@@ -11,14 +11,14 @@ mongoose.connect(uri)
 const seedElectionData = async () => {
   const elections = [
     {
-      electionName: "Election 2024",
+      electionName: "General Election 2024",
       description:"gkjerngntkjn",
       createdBy: "kesavan",
       approvedBy:"kesavan",
       voterLists: ["General Election 2024","Election 2024"],  // Voter list names
       candidateLists: ["General Election 2024" , "Election 2024"],  // Candidate list names
-      startTime: new Date("2024-11-26T11:45:00"),
-      endTime: new Date("2024-11-26T11:50:00"),
+      startTime: new Date("2024-12-18T14:41:00"),
+      endTime: new Date("2024-12-18T14:45:00"),
       isResultPublished: false
     }
   ];

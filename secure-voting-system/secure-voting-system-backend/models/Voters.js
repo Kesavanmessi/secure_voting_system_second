@@ -7,7 +7,8 @@ const voterSchema = new mongoose.Schema({
     {
       voterId: { type: String, required: true },
       voterName: { type: String, required: true },
-      password: { type: String, required: true },
+      email: { type: String, required: true }, // Added email field
+      password: { type: String, required: false }, // Made optional since it's generated automatically
       address: { type: String, required: true },
       age: { type: Number, required: true }
     }

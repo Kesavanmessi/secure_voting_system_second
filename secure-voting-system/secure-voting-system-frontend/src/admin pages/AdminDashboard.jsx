@@ -63,6 +63,13 @@ function AdminDashboard() {
               }>
               Election Requests
             </NavLink>
+            <NavLink 
+              to="adding-lists" 
+              className={({ isActive }) => 
+                isActive ? "text-2xl text-yellow-400" : "text-2xl text-blue-300 hover:text-blue-500"
+              }>
+              Manage Lists
+            </NavLink>
           </>
         )}
       </nav>

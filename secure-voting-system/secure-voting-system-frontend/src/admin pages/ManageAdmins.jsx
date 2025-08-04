@@ -58,7 +58,7 @@ const ManageAdmins = () => {
     try {
       await axios.put(`http://localhost:5000/api/admins/${editingAdmin.adminId}`, editingAdmin);
       setAdmins((prev) =>
-        prev.map((admin) => (admin.id === editingAdmin.id ? editingAdmin : admin))
+        prev.map((admin) => (admin.adminId === editingAdmin.adminId ? editingAdmin : admin))
       );
       setEditingAdmin(null);
       showMessage("Admin updated successfully!", "success");

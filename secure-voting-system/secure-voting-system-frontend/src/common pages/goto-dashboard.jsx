@@ -15,8 +15,14 @@ function DashBoard() {
 
           <Link 
             to='/voter-login' 
-            className='hover:bg-blue-100 border-2 p-5 text-center text-5xl text-green-600 rounded-xl'>
+            className='border-2 p-5 text-center text-5xl text-green-600 mb-10 hover:bg-blue-100 rounded-xl'>
               Voter Login
+          </Link>
+
+          <Link 
+            to='/public-view' 
+            className='border-2 p-5 text-center text-5xl text-yellow-600 hover:bg-blue-100 rounded-xl'>
+              Public View
           </Link>
         </div>
       </div>
