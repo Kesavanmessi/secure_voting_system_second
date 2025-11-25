@@ -1,17 +1,7 @@
 // seedAdmin.js
 require('dotenv').config();
-const mongoose = require('mongoose');
+const connectDB = require('./config/db');
 const Admin = require('./models/Admin');
-
-const mongoURI = process.env.MONGODB_URI;
-if (!mongoURI) {
-  throw new Error('MONGODB_URI not set in .env');
-}
-
-mongoose.connect(mongoURI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
 
 const seedAdminData = async () => {
   const username = "Kesavan";
@@ -38,6 +28,15 @@ const seedAdminData = async () => {
   }
 };
 
-seedAdminData()
-  .then(() => mongoose.connection.close())
-  .catch(error => { console.error("Error seeding admin data:", error); mongoose.connection.close(); });
+// Connect then seed
+connectDB()
+  .then(() => seedAdminData())
+  .then(() => {
+    // Close mongoose connection after done
+    return require('mongoose').connection.close();
+  })
+  .catch(error => {
+    console.error('Error seeding admin data:', error);
+    try { require('mongoose').connection.close(); } catch (e) {}
+    process.exit(1);
+  });
