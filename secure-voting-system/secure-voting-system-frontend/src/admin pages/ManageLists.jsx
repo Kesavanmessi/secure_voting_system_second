@@ -10,6 +10,37 @@ function ManageLists() {
   const [newItems, setNewItems] = useState([]);
   const [message, setMessage] = useState(null);
   const [messageType, setMessageType] = useState("success"); // success or error
+  const [file, setFile] = useState(null);
+
+  const handleUploadList = async () => {
+    if (!newListName || !file) {
+      showMessage("List name and file are required.", "error");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("listname", newListName);
+    formData.append("file", file);
+
+    const endpoint = activeTab === "voter" ? "voters" : "candidates";
+
+    try {
+      await axios.post(`http://localhost:5000/api/upload/${endpoint}`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      showMessage(`${activeTab === "voter" ? "Voter" : "Candidate"} list uploaded successfully.`, "success");
+      fetchLists();
+      setNewListName("");
+      setFile(null);
+      // Reset file input if possible, or just rely on state
+      document.querySelector('input[type="file"]').value = '';
+    } catch (error) {
+      console.error("Error uploading list:", error);
+      showMessage(error.response?.data?.message || "Error uploading list.", "error");
+    }
+  };
 
   useEffect(() => {
     fetchLists();
@@ -96,7 +127,11 @@ function ManageLists() {
       activeTab === "voter"
         ? { voterId: "", voterName: "", age: "", address: "", password: "" }
         : { candidateId: "", candidateName: "", party: "" };
-    setSelectedList((prev) => ({ ...prev, items: [...prev.items, newItem] }));
+    if (selectedList) {
+      setSelectedList((prev) => ({ ...prev, items: [...(prev?.items || []), newItem] }));
+    } else {
+      setNewItems((prev) => [...prev, newItem]);
+    }
   };
 
   const handleDeleteItem = (index) => {
@@ -160,7 +195,7 @@ function ManageLists() {
         <input
           type="text"
           placeholder="List Name"
-          className="w-full p-2 mb-4 rounded-lg"
+          className="w-full p-2 mb-4 rounded-lg text-black"
           value={selectedList ? selectedList.listname : newListName}
           onChange={(e) =>
             selectedList
@@ -174,7 +209,7 @@ function ManageLists() {
             <input
               type="text"
               placeholder={activeTab === "voter" ? "Voter ID" : "Candidate ID"}
-              className="p-2 rounded-lg flex-1"
+              className="p-2 rounded-lg flex-1 text-black"
               value={item[activeTab === "voter" ? "voterId" : "candidateId"]}
               onChange={(e) => {
                 const key = activeTab === "voter" ? "voterId" : "candidateId";
@@ -207,6 +242,38 @@ function ManageLists() {
         >
           {selectedList ? "Save Changes" : "Create List"}
         </button>
+
+        {!selectedList && (
+          <div className="mt-10 border-t border-gray-700 pt-6">
+            <h3 className="text-xl text-yellow-500 mb-4">OR Upload from Excel</h3>
+            <div className="flex flex-col gap-4">
+              <input
+                type="text"
+                placeholder="List Name for Upload"
+                className="w-full p-2 rounded-lg text-black"
+                value={newListName}
+                onChange={(e) => setNewListName(e.target.value)}
+              />
+              <input
+                type="file"
+                accept=".xlsx, .xls"
+                className="w-full p-2 rounded-lg bg-gray-700 text-white"
+                onChange={(e) => setFile(e.target.files[0])}
+              />
+              <button
+                className="bg-purple-500 p-2 rounded-lg w-full"
+                onClick={handleUploadList}
+              >
+                Upload Excel
+              </button>
+            </div>
+            <p className="text-sm text-gray-400 mt-2">
+              {activeTab === "candidate"
+                ? "Excel must contain 'candidateId' and 'candidateName' columns. Other columns are optional."
+                : "Excel must contain 'voterId', 'voterName', 'email', 'address', 'age'. 'password' is optional."}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

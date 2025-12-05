@@ -1,15 +1,14 @@
 const mongoose = require('mongoose');
 
+const candidateItemSchema = new mongoose.Schema({
+  candidateId: { type: String, required: true },
+  candidateName: { type: String, required: true },
+}, { strict: false });
+
 const candidateSchema = new mongoose.Schema({
   listname: { type: String, required: true },
   candidates: {
-    type: [
-      {
-        candidateId: { type: String, required: true },
-        candidateName: { type: String, required: true },
-        party: { type: String, required: true },
-      },
-    ],
+    type: [candidateItemSchema],
     default: [
       {
         candidateId: 'C1NOTA2',

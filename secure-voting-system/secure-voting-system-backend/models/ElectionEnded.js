@@ -7,19 +7,19 @@ const electionEndedSchema = new mongoose.Schema({
   endTime: { type: Date, required: true },
   votersParticipated: { type: [String], default: [] }, // Array of voter IDs who participated
   votersNotParticipated: { type: [String], default: [] }, // Array of voter IDs who did not participate
-  candidates: [
-    {
+  candidates: {
+    type: [new mongoose.Schema({
       candidateId: { type: String, required: true },
       name: { type: String, required: true },
-      party: { type: String, required: true },
       votes: { type: Number, required: true },
-    },
-  ],
+    }, { strict: false, _id: false })],
+  },
   winner: {
-    candidateId: { type: String, required: true },
-    name: { type: String, required: true },
-    party: { type: String, required: true },
-    votes: { type: Number, required: true },
+    type: new mongoose.Schema({
+      candidateId: { type: String, required: true },
+      name: { type: String, required: true },
+      votes: { type: Number, required: true },
+    }, { strict: false, _id: false }),
   },
   createdBy: { type: String, required: true }, // Admin who created the election
 });

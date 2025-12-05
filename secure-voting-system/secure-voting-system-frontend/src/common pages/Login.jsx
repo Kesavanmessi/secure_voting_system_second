@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
+import AuthContext from '../context/AuthContext';
 
 const Login = ({ login }) => {
   const [username, setUsername] = useState('');
@@ -31,7 +31,7 @@ const Login = ({ login }) => {
         });
 
         if (response.data.success) {
-          loginAdmin(response.data.token, response.data.admin);
+          loginAdmin(response.data.admin);
           navigate('/admin-dashboard');
         } else {
           setErrorMessage(response.data.message || 'Invalid credentials');
