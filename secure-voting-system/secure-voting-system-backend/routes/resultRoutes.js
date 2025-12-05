@@ -13,7 +13,7 @@ router.get('/finished', async (req, res) => {
     try {
         const finishedElections = await Election.find({
             endTime: { $lt: new Date() }
-        });
+        }).sort({ endTime: -1 });
         res.status(200).json(finishedElections);
     } catch (error) {
         console.error('Error fetching finished elections:', error);

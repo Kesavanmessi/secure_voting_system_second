@@ -3,7 +3,7 @@ require('dotenv').config();
 
 // Create transporter for sending emails
 const createTransporter = () => {
-  return nodemailer.createTransporter({
+  return nodemailer.createTransport({
     service: 'gmail',
     auth: {
       user: process.env.EMAIL_USER, // Your Gmail address
@@ -21,7 +21,7 @@ const generateOTP = () => {
 const sendElectionCreationEmail = async (voterEmail, voterName, electionName, voterId, randomPassword) => {
   try {
     const transporter = createTransporter();
-    
+
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: voterEmail,
@@ -61,7 +61,7 @@ const sendElectionCreationEmail = async (voterEmail, voterName, electionName, vo
 const sendElectionStartEmail = async (voterEmail, voterName, electionName, startTime, endTime) => {
   try {
     const transporter = createTransporter();
-    
+
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: voterEmail,
@@ -95,7 +95,7 @@ const sendElectionStartEmail = async (voterEmail, voterName, electionName, start
 const sendElectionEndEmail = async (voterEmail, voterName, electionName) => {
   try {
     const transporter = createTransporter();
-    
+
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: voterEmail,
@@ -125,7 +125,7 @@ const sendElectionEndEmail = async (voterEmail, voterName, electionName) => {
 const sendOTPEmail = async (voterEmail, voterName, otp) => {
   try {
     const transporter = createTransporter();
-    
+
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: voterEmail,
@@ -153,10 +153,170 @@ const sendOTPEmail = async (voterEmail, voterName, otp) => {
   }
 };
 
+// Send Admin Approval Email
+const sendAdminApprovalEmail = async (email, username) => {
+  try {
+    const transporter = createTransporter();
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Admin Access Approved - Secure Voting System',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #4CAF50;">Access Approved!</h2>
+          <p>Hello ${username},</p>
+          <p>Your request for <strong>Manager Admin</strong> access has been approved by the Head Admin.</p>
+          <p>You can now log in to the admin dashboard using your credentials.</p>
+          <p>
+            <a href="http://localhost:5173/admin-login" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login to Dashboard</a>
+          </p>
+          <p>If you did not request this, please contact support immediately.</p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Approval email sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending approval email:', error);
+    return false;
+  }
+};
+
+// Send Election Update Email
+const sendElectionUpdateEmail = async (voterEmail, voterName, electionName, startTime, endTime) => {
+  try {
+    const transporter = createTransporter();
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: voterEmail,
+      subject: `Important Update - Election: ${electionName}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #e67e22;">Election Schedule Updated</h2>
+          <p>Dear ${voterName},</p>
+          <p>The schedule for the election <strong>${electionName}</strong> has been updated.</p>
+          <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+            <h3 style="color: #856404; margin-top: 0;">New Schedule:</h3>
+            <p><strong>Start Time:</strong> ${new Date(startTime).toLocaleString()}</p>
+            <p><strong>End Time:</strong> ${new Date(endTime).toLocaleString()}</p>
+          </div>
+          <p>Please make a note of these changes.</p>
+          <p>Best regards,<br>Secure Voting System</p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Update email sent to ${voterEmail}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending update email:', error);
+    return false;
+  }
+};
+
+// Send Election Cancellation Email
+const sendElectionCancellationEmail = async (voterEmail, voterName, electionName) => {
+  try {
+    const transporter = createTransporter();
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: voterEmail,
+      subject: `Election Cancelled - ${electionName}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #c0392b;">Election Cancelled</h2>
+          <p>Dear ${voterName},</p>
+          <p>We regret to inform you that the election <strong>${electionName}</strong> has been cancelled.</p>
+          <div style="background-color: #f8d7da; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc3545;">
+            <p style="color: #721c24; margin: 0;">This action was taken by the election administration. If you have any questions, please contact support.</p>
+          </div>
+          <p>Best regards,<br>Secure Voting System</p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Cancellation email sent to ${voterEmail}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending cancellation email:', error);
+    return false;
+  }
+};
+
+// Send Password Reset OTP Email
+const sendPasswordResetOTPEmail = async (email, username, otp) => {
+  try {
+    const transporter = createTransporter();
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Password Reset Request - Secure Voting System',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2c3e50;">Password Reset Request</h2>
+          <p>Hello ${username},</p>
+          <p>You have requested to reset your password for the admin portal.</p>
+          <p>Your OTP for password reset is:</p>
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+            <h1 style="color: #e67e22; font-size: 32px; margin: 0; letter-spacing: 5px;">${otp}</h1>
+          </div>
+          <p>This OTP is valid for 5 minutes.</p>
+          <p>If you did not request this, please ignore this email.</p>
+          <p>Best regards,<br>Secure Voting System</p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Password reset OTP email sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending password reset OTP email:', error);
+    return false;
+  }
+};
+
+// Send Admin Removal Email
+const sendAdminRemovalEmail = async (email, username) => {
+  try {
+    const transporter = createTransporter();
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Admin Access Revoked - Secure Voting System',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #c0392b;">Access Revoked</h2>
+          <p>Hello ${username},</p>
+          <p>Your admin access to the <strong>Secure Voting System</strong> has been revoked by the Head Admin.</p>
+          <p>You will no longer be able to log in to the admin dashboard.</p>
+          <p>If you believe this is an error, please contact the Head Admin directly.</p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Removal email sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending removal email:', error);
+    return false;
+  }
+};
+
 module.exports = {
   generateOTP,
   sendElectionCreationEmail,
   sendElectionStartEmail,
   sendElectionEndEmail,
-  sendOTPEmail
-}; 
+  sendOTPEmail,
+  sendAdminApprovalEmail,
+  sendElectionUpdateEmail,
+  sendElectionCancellationEmail,
+  sendAdminRemovalEmail,
+  sendPasswordResetOTPEmail
+};

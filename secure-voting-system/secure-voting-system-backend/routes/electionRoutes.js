@@ -8,6 +8,8 @@ const Voter = require('../models/Voters');
 const Candidate = require('../models/Candidates');
 const PendingVoterList = require('../models/PendingVoterList');
 const PendingCandidateList = require('../models/PendingCandidateList');
+const RejectedElection = require('../models/RejectedElection');
+const RejectedModification = require('../models/RejectedModification');
 const Admin = require('../models/Admin');
 const ElectionCandidates = require('../models/ElectionCandidates');
 const ElectionVoters = require('../models/ElectionVoters');
@@ -15,7 +17,7 @@ const VoteLog = require('../models/VoteLog');
 const OTP = require('../models/OTP');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { generateOTP, sendOTPEmail } = require('../utils/emailService');
+const { generateOTP, sendOTPEmail, sendElectionCreationEmail, sendElectionUpdateEmail, sendElectionCancellationEmail } = require('../utils/emailService');
 const { encryptVoteCount, decryptVoteCount } = require('../utils/encryption');
 require('dotenv').config();
 
@@ -238,9 +240,25 @@ router.get('/ongoing-details', async (req, res) => {
 router.delete('/trash', async (req, res) => {
     try {
         const { id } = req.query;
+        const election = await Election.findById(id);
+
+        if (election) {
+            // Send emails to all voters in the selected lists
+            const lists = await Voter.find({ listname: { $in: election.voterLists } });
+            const allVoters = lists.flatMap(list => list.voters);
+
+            allVoters.forEach(voter => {
+                if (voter.email) {
+                    sendElectionCancellationEmail(voter.email, voter.voterName, election.electionName)
+                        .catch(err => console.error(`Failed to send cancellation email to ${voter.email}:`, err));
+                }
+            });
+        }
+
         await Election.findByIdAndDelete(id);
         res.status(200).json({ message: 'Election deleted successfully' });
     } catch (error) {
+        console.error("Error deleting election:", error);
         res.status(500).json({ message: 'Error deleting election' });
     }
 });
@@ -263,6 +281,18 @@ router.put('/one/:id', async (req, res) => {
     const { electionName, startTime, endTime, voters, candidates, description } = req.body;
 
     try {
+        const currentElection = await Election.findById(req.params.id);
+        if (!currentElection) {
+            return res.status(404).json({ message: 'Election not found' });
+        }
+
+        const oldStart = new Date(currentElection.startTime).getTime();
+        const oldEnd = new Date(currentElection.endTime).getTime();
+        const newStart = new Date(startTime).getTime();
+        const newEnd = new Date(endTime).getTime();
+
+        const timeChanged = oldStart !== newStart || oldEnd !== newEnd;
+
         const updatedElection = await Election.findByIdAndUpdate(
             req.params.id,
             {
@@ -272,12 +302,22 @@ router.put('/one/:id', async (req, res) => {
             { new: true, runValidators: true }
         );
 
-        if (!updatedElection) {
-            return res.status(404).json({ message: 'Election not found' });
+        if (timeChanged) {
+            // Send emails to all voters in the selected lists
+            const lists = await Voter.find({ listname: { $in: updatedElection.voterLists } });
+            const allVoters = lists.flatMap(list => list.voters);
+
+            allVoters.forEach(voter => {
+                if (voter.email) {
+                    sendElectionUpdateEmail(voter.email, voter.voterName, electionName, startTime, endTime)
+                        .catch(err => console.error(`Failed to send update email to ${voter.email}:`, err));
+                }
+            });
         }
 
         res.json({ success: true, message: 'Election updated successfully', updatedElection });
     } catch (error) {
+        console.error("Error updating election:", error);
         res.status(500).json({ message: 'Error updating election' });
     }
 });
@@ -468,13 +508,22 @@ router.get('/pending', async (req, res) => {
 });
 
 //rejecting the created election
-router.delete('/reject-created/:id', async (req, res) => {
-    console.log(1);
+router.post('/reject-created/:id', async (req, res) => {
+    const { reason, rejectedBy } = req.body;
     try {
-        const deletedRequest = await PendingElection.findByIdAndDelete(req.params.id);
-        if (!deletedRequest) {
+        const pendingElection = await PendingElection.findById(req.params.id);
+        if (!pendingElection) {
             return res.status(404).json({ success: false, message: 'Pending election not found' });
         }
+
+        const rejectedElection = new RejectedElection({
+            ...pendingElection.toObject(),
+            rejectionReason: reason,
+            rejectedBy: rejectedBy
+        });
+        await rejectedElection.save();
+
+        await PendingElection.findByIdAndDelete(req.params.id);
         res.status(200).json({ success: true, message: 'Created election request rejected successfully', deletedRequestId: req.params.id });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error rejecting created election', error: error.message });
@@ -483,7 +532,6 @@ router.delete('/reject-created/:id', async (req, res) => {
 
 //getting details of the modified election by others
 router.get('/pending-modifications', async (req, res) => {
-    console.log(1);
     try {
         const pendingModifications = await PendingElectionForModifications.find();
         res.status(200).json(pendingModifications);
@@ -493,15 +541,46 @@ router.get('/pending-modifications', async (req, res) => {
 });
 
 //rejecting the modified election
-router.delete('/reject-modification/:id', async (req, res) => {
+router.post('/reject-modification/:id', async (req, res) => {
+    const { reason, rejectedBy } = req.body;
     try {
-        const deletedModification = await PendingElectionForModifications.findByIdAndDelete(req.params.id);
-        if (!deletedModification) {
+        const pendingModification = await PendingElectionForModifications.findById(req.params.id);
+        if (!pendingModification) {
             return res.status(404).json({ success: false, message: 'Pending modification not found' });
         }
+
+        const rejectedModification = new RejectedModification({
+            ...pendingModification.toObject(),
+            rejectionReason: reason,
+            rejectedBy: rejectedBy
+        });
+        await rejectedModification.save();
+
+        await PendingElectionForModifications.findByIdAndDelete(req.params.id);
         res.status(200).json({ success: true, message: 'Modified election request rejected successfully', deletedRequestId: req.params.id });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error rejecting modification', error: error.message });
+    }
+});
+
+// Fetch My Requests (Pending & Rejected)
+router.get('/my-requests', async (req, res) => {
+    const { username } = req.query;
+    if (!username) return res.status(400).json({ success: false, message: 'Username required' });
+
+    try {
+        const pendingCreated = await PendingElection.find({ createdBy: username });
+        const pendingModified = await PendingElectionForModifications.find({ modifiedBy: username });
+        const rejectedCreated = await RejectedElection.find({ createdBy: username });
+        const rejectedModified = await RejectedModification.find({ modifiedBy: username });
+
+        res.status(200).json({
+            success: true,
+            pending: { created: pendingCreated, modified: pendingModified },
+            rejected: { created: rejectedCreated, modified: rejectedModified }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error fetching my requests', error: error.message });
     }
 });
 

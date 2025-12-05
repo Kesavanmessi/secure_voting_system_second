@@ -5,6 +5,7 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [admin, setAdmin] = useState(null);
   const [voter, setVoter] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // Function to save admin info after login
   const loginAdmin = (adminData) => {
@@ -53,6 +54,8 @@ export const AuthProvider = ({ children }) => {
       console.error("Error parsing stored data:", error);
       localStorage.removeItem("secureVoting_admin");
       localStorage.removeItem("secureVoting_voter");
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -61,6 +64,7 @@ export const AuthProvider = ({ children }) => {
       value={{
         admin,
         voter,
+        loading,
         loginAdmin,
         loginVoter,
         logoutAdmin,

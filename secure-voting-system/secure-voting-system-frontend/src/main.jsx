@@ -4,9 +4,8 @@ import { useContext } from 'react';
 import AuthContext, { AuthProvider } from './context/AuthContext';
 
 // Common Pages
-import DashBoard from './common pages/goto-dashboard.jsx';
+import LandingPage from './common pages/LandingPage.jsx';
 import Login from './common pages/Login.jsx';
-import PublicView from './common pages/PublicView.jsx';
 
 // Admin Pages
 import AdminDashboard from './admin pages/AdminDashboard.jsx';
@@ -17,7 +16,8 @@ import ViewResults from './admin pages/ViewResults.jsx';
 import AdminHome from './admin pages/AdminHome.jsx';
 import ManageAdmins from './admin pages/ManageAdmins.jsx';
 import RequestsForElection from './admin pages/RequestsForElection.jsx';
-import ManageLists from './admin pages/ManageLists.jsx';
+import ManageAdminRequests from './admin pages/ManageAdminRequests.jsx';
+import MyElectionRequests from './admin pages/MyElectionRequests.jsx';
 
 // Voter Pages
 import VoterDashboard from './voter pages/VoterDashboard.jsx';
@@ -31,7 +31,15 @@ import './index.css';
 
 // ProtectedRoute Component
 const ProtectedRoute = ({ element, allowedRoles, redirectPath = '/' }) => {
-  const { admin, voter } = useContext(AuthContext);
+  const { admin, voter, loading } = useContext(AuthContext);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-slate-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-500"></div>
+      </div>
+    );
+  }
 
   if (admin && allowedRoles.includes(admin.role)) {
     return element;
@@ -49,10 +57,9 @@ const App = () => {
       <Router>
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<DashBoard />} />
+          <Route path="/" element={<LandingPage />} />
           <Route path="/admin-login" element={<Login login="Admin" />} />
           <Route path="/voter-login" element={<Login login="Voter" />} />
-          <Route path="/public-view" element={<PublicView />} />
 
           {/* Admin Dashboard Routes */}
           <Route
@@ -113,9 +120,15 @@ const App = () => {
               }
             />
             <Route
-              path="adding-lists"
+              path="my-requests"
               element={
-                <ProtectedRoute element={<ManageLists />} allowedRoles={['Head Admin']} />
+                <ProtectedRoute element={<MyElectionRequests />} allowedRoles={['Manager Admin']} />
+              }
+            />
+            <Route
+              path="admin-requests"
+              element={
+                <ProtectedRoute element={<ManageAdminRequests />} allowedRoles={['Head Admin']} />
               }
             />
           </Route>

@@ -2,6 +2,7 @@ import { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import AuthContext from '../context/AuthContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 function CreateElection() {
   const [electionName, setElectionName] = useState('');
@@ -64,18 +65,17 @@ function CreateElection() {
     e.preventDefault();
     setMessage(null);
 
+    // Basic Validation
     if (description.length < 20) {
       setMessage("Description should be at least 20 letters.");
       return;
     }
 
+    // Name Verification
     const isNameValid = await verifyElectionName();
-    if (!isNameValid && electionName.length >= 8 && !message?.includes('exists')) {
-      return;
-    } else if (!isNameValid) {
-      return;
-    }
+    if (!isNameValid) return; // verifyElectionName sets the message
 
+    // Date Validation
     const currentTime = new Date();
     const start = new Date(startTime);
     const end = new Date(endTime);
@@ -142,101 +142,131 @@ function CreateElection() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex flex-col justify-center items-center py-10">
-      <form className="w-full max-w-2xl p-8 bg-gray-800 rounded-lg shadow-lg" onSubmit={handleSubmit}>
-        <h2 className="text-3xl text-green-500 mb-6 text-center">Create Election</h2>
+    <div className="min-h-screen bg-slate-900 text-slate-200 flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-3xl"
+      >
+        <div className="bg-slate-800/50 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-8 sm:p-10">
 
-        {message && (
-          <div className={`mb-5 p-3 rounded text-center ${message.includes('successfully') ? 'bg-green-600' : 'bg-red-600'}`}>
-            {message}
+          <div className="text-center mb-10">
+            <h2 className="text-4xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent mb-2">Create Election</h2>
+            <p className="text-slate-400">Set up a new secure election event</p>
           </div>
-        )}
 
-        {/* Election Details */}
-        <div className="mb-6">
-          <label htmlFor="election-name" className="text-lg block mb-2">Election Name:</label>
-          <input
-            id="election-name"
-            type="text"
-            className="w-full p-2 rounded-lg text-black"
-            value={electionName}
-            onChange={(e) => setElectionName(e.target.value)}
-            required
-            minLength={8}
-          />
+          <AnimatePresence>
+            {message && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className={`mb-6 p-4 rounded-xl border ${message.includes('successfully') ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}
+              >
+                <div className="flex items-center gap-2 justify-center">
+                  {message.includes('successfully') ? (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  )}
+                  <span className="font-medium">{message}</span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+
+            {/* Election Details Section */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Election Name</label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-transparent transition-all"
+                  value={electionName}
+                  onChange={(e) => setElectionName(e.target.value)}
+                  placeholder="Enter a unique name (min 8 chars)"
+                  required
+                  minLength={8}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Description</label>
+                <textarea
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-transparent transition-all h-32 resize-none"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Describe the purpose of this election..."
+                  required
+                  minLength={20}
+                ></textarea>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* File Uploads */}
+              <div className="space-y-4">
+                <div className="bg-slate-900/30 p-4 rounded-xl border border-white/5">
+                  <label className="block text-sm font-medium text-emerald-400 mb-2">Voter List (.xlsx)</label>
+                  <input
+                    type="file"
+                    accept=".xlsx"
+                    onChange={handleVoterFileChange}
+                    className="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-500/10 file:text-emerald-400 hover:file:bg-emerald-500/20 transition-all cursor-pointer"
+                    required
+                  />
+                </div>
+                <div className="bg-slate-900/30 p-4 rounded-xl border border-white/5">
+                  <label className="block text-sm font-medium text-cyan-400 mb-2">Candidate List (.xlsx)</label>
+                  <input
+                    type="file"
+                    accept=".xlsx"
+                    onChange={handleCandidateFileChange}
+                    className="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-500/10 file:text-cyan-400 hover:file:bg-cyan-500/20 transition-all cursor-pointer"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Timing */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Start Time</label>
+                  <input
+                    type="datetime-local"
+                    className="w-full px-4 py-3 bg-slate-900/50 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all appearance-none"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">End Time</label>
+                  <input
+                    type="datetime-local"
+                    className="w-full px-4 py-3 bg-slate-900/50 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all appearance-none"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              type="submit"
+              className="w-full mt-8 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all duration-300"
+            >
+              {admin?.role === 'Head Admin' ? 'Create Election' : 'Submit for Approval'}
+            </motion.button>
+
+          </form>
         </div>
-
-        <div className="mb-6">
-          <label htmlFor="description" className="text-lg block mb-2">Description:</label>
-          <textarea
-            id="description"
-            className="w-full p-2 rounded-lg text-black"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows="3"
-            placeholder="Provide a brief description..."
-            required
-            minLength={20}
-          ></textarea>
-        </div>
-
-        {/* File Uploads */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div>
-            <label htmlFor="voter-file" className="text-lg block mb-2 text-blue-400">Upload Voter List (Excel):</label>
-            <input
-              id="voter-file"
-              type="file"
-              accept=".xlsx"
-              onChange={handleVoterFileChange}
-              className="w-full p-2 rounded bg-gray-700 text-white border border-gray-600"
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor="candidate-file" className="text-lg block mb-2 text-blue-400">Upload Candidate List (Excel):</label>
-            <input
-              id="candidate-file"
-              type="file"
-              accept=".xlsx"
-              onChange={handleCandidateFileChange}
-              className="w-full p-2 rounded bg-gray-700 text-white border border-gray-600"
-              required
-            />
-          </div>
-        </div>
-
-        {/* Timing */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div>
-            <label htmlFor="start-time" className="text-lg block mb-2">Start Time:</label>
-            <input
-              id="start-time"
-              type="datetime-local"
-              className="w-full p-2 rounded-lg text-black"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="end-time" className="text-lg block mb-2">End Time:</label>
-            <input
-              id="end-time"
-              type="datetime-local"
-              className="w-full p-2 rounded-lg text-black"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              required
-            />
-          </div>
-        </div>
-
-        <button type="submit" className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition duration-300">
-          {admin?.role === 'Head Admin' ? 'Create Election' : 'Submit for Approval'}
-        </button>
-      </form>
+      </motion.div>
     </div>
   );
 }

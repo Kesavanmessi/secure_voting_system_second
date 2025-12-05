@@ -6,6 +6,8 @@ import AuthContext from '../context/AuthContext';
 const Login = ({ login }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(''); // New state for email
+  const [isSignup, setIsSignup] = useState(false); // New state for signup mode
   const [electionName, setElectionName] = useState('');
   const [voterId, setVoterId] = useState('');
   const [otp, setOtp] = useState('');
@@ -14,6 +16,14 @@ const Login = ({ login }) => {
   const [showOTPInput, setShowOTPInput] = useState(false);
   const [voterData, setVoterData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Forgot Password State
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotOtp, setForgotOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [resetStep, setResetStep] = useState(1); // 1: Email, 2: OTP & New Password
+
   const navigate = useNavigate();
   const { loginAdmin, loginVoter } = useContext(AuthContext);
 
@@ -24,23 +34,47 @@ const Login = ({ login }) => {
     setSuccessMessage('');
 
     if (login === 'Admin') {
-      try {
-        const response = await axios.post('http://localhost:5000/api/auth/admin-login', {
-          username,
-          password,
-        });
+      if (isSignup) {
+        // Handle Admin Signup
+        try {
+          const response = await axios.post('http://localhost:5000/api/admins/signup', {
+            username,
+            email,
+            password,
+          });
 
-        if (response.data.success) {
-          loginAdmin(response.data.admin);
-          navigate('/admin-dashboard');
-        } else {
-          setErrorMessage(response.data.message || 'Invalid credentials');
+          if (response.data.success) {
+            setSuccessMessage(response.data.message);
+            setIsSignup(false); // Switch back to login
+            setUsername('');
+            setPassword('');
+            setEmail('');
+          } else {
+            setErrorMessage(response.data.message || 'Signup failed');
+          }
+        } catch (error) {
+          setErrorMessage(error.response?.data?.message || 'Error connecting to server.');
         }
-      } catch (error) {
-        setErrorMessage('Error connecting to server. Please try again.');
+      } else {
+        // Handle Admin Login
+        try {
+          const response = await axios.post('http://localhost:5000/api/auth/admin-login', {
+            username,
+            password,
+          });
+
+          if (response.data.success) {
+            loginAdmin(response.data.admin);
+            navigate('/admin-dashboard');
+          } else {
+            setErrorMessage(response.data.message || 'Invalid credentials');
+          }
+        } catch (error) {
+          setErrorMessage('Error connecting to server. Please try again.');
+        }
       }
     } else {
-      // Voter login
+      // Voter login logic (unchanged)
       if (!electionName || !voterId || !password) {
         setErrorMessage('Please fill in all fields');
         setIsLoading(false);
@@ -107,13 +141,186 @@ const Login = ({ login }) => {
     setTimeout(() => setErrorMessage(''), 5000);
   };
 
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    try {
+      const response = await axios.post('http://localhost:5000/api/auth/forgot-password', {
+        adminId: forgotEmail
+      });
+
+      if (response.data.success) {
+        setSuccessMessage(response.data.message);
+        setResetStep(2);
+      } else {
+        setErrorMessage(response.data.message || 'Failed to send OTP');
+      }
+    } catch (error) {
+      setErrorMessage('Error connecting to server.');
+    }
+    setIsLoading(false);
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    if (newPassword.length < 6) {
+      setErrorMessage('Password must be at least 6 characters long');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await axios.post('http://localhost:5000/api/auth/reset-password', {
+        adminId: forgotEmail,
+        otp: forgotOtp,
+        newPassword: newPassword
+      });
+
+      if (response.data.success) {
+        setSuccessMessage('Password reset successful! Redirecting to login...');
+        setTimeout(() => {
+          resetForm();
+        }, 2000);
+      } else {
+        setErrorMessage(response.data.message || 'Failed to reset password');
+      }
+    } catch (error) {
+      setErrorMessage('Error connecting to server.');
+    }
+    setIsLoading(false);
+  };
+
   const resetForm = () => {
     setShowOTPInput(false);
     setOtp('');
     setVoterData(null);
     setErrorMessage('');
     setSuccessMessage('');
+    setIsForgotPassword(false);
+    setForgotEmail('');
+    setForgotOtp('');
+    setNewPassword('');
+    setResetStep(1);
+    setIsSignup(false);
   };
+
+  // Render Forgot Password View
+  if (isForgotPassword) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
+        <div className="max-w-md w-full">
+          <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-3xl border border-white border-opacity-20 p-8 shadow-2xl">
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-gradient-to-r from-orange-400 to-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+              </div>
+              <h2 className="text-3xl font-bold text-white mb-2">Reset Password</h2>
+              <p className="text-blue-200">
+                {resetStep === 1 ? "Enter your email to receive an OTP" : "Enter OTP and your new password"}
+              </p>
+            </div>
+
+            {successMessage && (
+              <div className="mb-6 p-4 bg-green-500 bg-opacity-20 border border-green-400 rounded-lg">
+                <p className="text-green-300 text-sm">{successMessage}</p>
+              </div>
+            )}
+
+            {errorMessage && (
+              <div className="mb-6 p-4 bg-red-500 bg-opacity-20 border border-red-400 rounded-lg">
+                <p className="text-red-300 text-sm">{errorMessage}</p>
+              </div>
+            )}
+
+            {resetStep === 1 ? (
+              <form onSubmit={handleForgotPassword} className="space-y-6">
+                <div>
+                  <label htmlFor="forgotEmail" className="block text-sm font-medium text-blue-200 mb-2">
+                    Email Address / Admin ID
+                  </label>
+                  <input
+                    type="email"
+                    id="forgotEmail"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    className="w-full px-4 py-3 bg-white bg-opacity-10 border border-white border-opacity-20 rounded-xl text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300"
+                    placeholder="Enter your registered email"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 px-6 rounded-xl font-semibold hover:from-orange-600 hover:to-red-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-transparent transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? 'Sending OTP...' : 'Send OTP'}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleResetPassword} className="space-y-6">
+                <div>
+                  <label htmlFor="forgotOtp" className="block text-sm font-medium text-blue-200 mb-2">
+                    Enter OTP
+                  </label>
+                  <input
+                    type="text"
+                    id="forgotOtp"
+                    value={forgotOtp}
+                    onChange={(e) => setForgotOtp(e.target.value)}
+                    maxLength="6"
+                    className="w-full px-4 py-3 bg-white bg-opacity-10 border border-white border-opacity-20 rounded-xl text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300"
+                    placeholder="Enter 6-digit OTP"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="newPassword" className="block text-sm font-medium text-blue-200 mb-2">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    id="newPassword"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-4 py-3 bg-white bg-opacity-10 border border-white border-opacity-20 rounded-xl text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300"
+                    placeholder="Enter new password"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 px-6 rounded-xl font-semibold hover:from-orange-600 hover:to-red-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-transparent transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? 'Resetting Password...' : 'Reset Password'}
+                </button>
+              </form>
+            )}
+
+            <button
+              type="button"
+              onClick={resetForm}
+              className="w-full mt-4 bg-gray-600 text-white py-3 px-6 rounded-xl font-semibold hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-transparent transition-all duration-300"
+            >
+              Back to Login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (showOTPInput) {
     return (
@@ -135,7 +342,7 @@ const Login = ({ login }) => {
                 <p className="text-green-300 text-sm">{successMessage}</p>
               </div>
             )}
-            
+
             {errorMessage && (
               <div className="mb-6 p-4 bg-red-500 bg-opacity-20 border border-red-400 rounded-lg">
                 <p className="text-red-300 text-sm">{errorMessage}</p>
@@ -185,11 +392,10 @@ const Login = ({ login }) => {
       <div className="max-w-md w-full">
         <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-3xl border border-white border-opacity-20 p-8 shadow-2xl">
           <div className="text-center mb-8">
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
-              login === 'Admin' 
-                ? 'bg-gradient-to-r from-green-400 to-blue-500' 
-                : 'bg-gradient-to-r from-purple-400 to-pink-500'
-            }`}>
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${login === 'Admin'
+              ? 'bg-gradient-to-r from-green-400 to-blue-500'
+              : 'bg-gradient-to-r from-purple-400 to-pink-500'
+              }`}>
               {login === 'Admin' ? (
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -201,15 +407,23 @@ const Login = ({ login }) => {
               )}
             </div>
             <h2 className="text-3xl font-bold text-white mb-2">
-              {login === 'Admin' ? 'Admin Login' : 'Voter Login'}
+              {login === 'Admin'
+                ? (isSignup ? 'Admin Sign Up' : 'Admin Login')
+                : 'Voter Login'}
             </h2>
             <p className="text-blue-200">
-              {login === 'Admin' 
-                ? 'Access the administrative dashboard' 
+              {login === 'Admin'
+                ? (isSignup ? 'Request access to the dashboard' : 'Access the administrative dashboard')
                 : 'Cast your vote securely and anonymously'
               }
             </p>
           </div>
+
+          {successMessage && (
+            <div className="mb-6 p-4 bg-green-500 bg-opacity-20 border border-green-400 rounded-lg">
+              <p className="text-green-300 text-sm">{successMessage}</p>
+            </div>
+          )}
 
           {errorMessage && (
             <div className="mb-6 p-4 bg-red-500 bg-opacity-20 border border-red-400 rounded-lg">
@@ -231,8 +445,26 @@ const Login = ({ login }) => {
                     onChange={(e) => setUsername(e.target.value)}
                     className="w-full px-4 py-3 bg-white bg-opacity-10 border border-white border-opacity-20 rounded-xl text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
                     placeholder="Enter your username"
+                    required
                   />
                 </div>
+
+                {isSignup && (
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-blue-200 mb-2">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      id="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-4 py-3 bg-white bg-opacity-10 border border-white border-opacity-20 rounded-xl text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
+                      placeholder="Enter your email"
+                      required
+                    />
+                  </div>
+                )}
 
                 <div>
                   <label htmlFor="password" className="block text-sm font-medium text-blue-200 mb-2">
@@ -245,10 +477,23 @@ const Login = ({ login }) => {
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full px-4 py-3 bg-white bg-opacity-10 border border-white border-opacity-20 rounded-xl text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300"
                     placeholder="Enter your password"
+                    required
                   />
+                  {!isSignup && (
+                    <div className="flex justify-end mt-1">
+                      <button
+                        type="button"
+                        onClick={() => setIsForgotPassword(true)}
+                        className="text-white bg-transparent text-sm hover:underline focus:outline-none"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+                  )}
                 </div>
               </>
             ) : (
+              // Voter Form Fields (unchanged)
               <>
                 <div>
                   <label htmlFor="electionName" className="block text-sm font-medium text-blue-200 mb-2">
@@ -297,14 +542,29 @@ const Login = ({ login }) => {
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full py-3 px-6 rounded-xl font-semibold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${
-                login === 'Admin'
-                  ? 'bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 focus:ring-green-500'
-                  : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 focus:ring-purple-500'
-              }`}
+              className={`w-full py-3 px-6 rounded-xl font-semibold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed ${login === 'Admin'
+                ? 'bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 focus:ring-green-500'
+                : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 focus:ring-purple-500'
+                }`}
             >
-              {isLoading ? 'Signing In...' : 'Sign In'}
+              {isLoading ? (isSignup ? 'Signing Up...' : 'Signing In...') : (isSignup ? 'Sign Up' : 'Sign In')}
             </button>
+
+            {login === 'Admin' && (
+              <div className="text-center mt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSignup(!isSignup);
+                    setErrorMessage('');
+                    setSuccessMessage('');
+                  }}
+                  className="text-blue-300 hover:text-white underline text-sm"
+                >
+                  {isSignup ? 'Already have an account? Login' : "Don't have an account? Sign Up"}
+                </button>
+              </div>
+            )}
 
             <button
               type="button"
