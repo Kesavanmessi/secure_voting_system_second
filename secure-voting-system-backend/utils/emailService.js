@@ -2,27 +2,28 @@ const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 // Create transporter for sending emails
-// Check for critical variables (Sender or Auth)
-if (!process.env.EMAIL_USER || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-  console.error("❌ CRITICAL: EMAIL_USER, SMTP_USER, or SMTP_PASS is missing in Environment Variables!");
-}
-
-return nodemailer.createTransport({
-  host: 'smtp-relay.brevo.com',
-  port: 587,
-  secure: false, // Brevo uses STARTTLS on 587
-  connectionTimeout: 60000,
-  greetingTimeout: 30000,
-  socketTimeout: 60000,
-  dnsTimeout: 60000,
-  family: 4,
-  logger: true,
-  debug: true,
-  auth: {
-    user: process.env.SMTP_USER ? process.env.SMTP_USER.trim() : '',
-    pass: process.env.SMTP_PASS ? process.env.SMTP_PASS.trim() : ''
+const createTransporter = () => {
+  // Check for critical variables (Sender or Auth)
+  if (!process.env.EMAIL_USER || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.error("❌ CRITICAL: EMAIL_USER, SMTP_USER, or SMTP_PASS is missing in Environment Variables!");
   }
-});
+
+  return nodemailer.createTransport({
+    host: 'smtp-relay.brevo.com',
+    port: 587,
+    secure: false, // Brevo uses STARTTLS on 587
+    connectionTimeout: 60000,
+    greetingTimeout: 30000,
+    socketTimeout: 60000,
+    dnsTimeout: 60000,
+    family: 4,
+    logger: true,
+    debug: true,
+    auth: {
+      user: process.env.SMTP_USER ? process.env.SMTP_USER.trim() : '',
+      pass: process.env.SMTP_PASS ? process.env.SMTP_PASS.trim() : ''
+    }
+  });
 };
 
 // Generate OTP
