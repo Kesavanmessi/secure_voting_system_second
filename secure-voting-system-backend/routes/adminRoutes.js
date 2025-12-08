@@ -44,9 +44,9 @@ router.post("/", checkHeadAdmin, async (req, res) => {
     const newAdmin = new Admin({ username, role, password, adminId }); // Hash password in production
     await newAdmin.save();
 
-    // Send Welcome Email with credentials
+    // Send Welcome Email with credentials (Non-blocking)
     if (adminId && adminId.includes('@')) {
-      await sendAdminWelcomeEmail(adminId, username, password);
+      sendAdminWelcomeEmail(adminId, username, password).catch(err => console.error("Background Email Error:", err));
     }
 
     res.status(201).json({ success: true, admin: newAdmin });
@@ -109,9 +109,9 @@ router.delete("/:id", async (req, res) => {
       });
     }
 
-    // Attempt to send email notification
+    // Attempt to send email notification (Non-blocking)
     if (admin.adminId && admin.adminId.includes('@')) {
-      await sendAdminRemovalEmail(admin.adminId, admin.username);
+      sendAdminRemovalEmail(admin.adminId, admin.username).catch(err => console.error("Background Email Error:", err));
     }
 
     await Admin.deleteOne({ adminId: id });
@@ -194,8 +194,8 @@ router.post("/approve-signup/:id", async (req, res) => {
     // Delete from Pending
     await PendingAdmin.findByIdAndDelete(req.params.id);
 
-    // Send Email
-    sendAdminApprovalEmail(pendingAdmin.email, pendingAdmin.username);
+    // Send Email (Non-blocking)
+    sendAdminApprovalEmail(pendingAdmin.email, pendingAdmin.username).catch(err => console.error("Background Email Error:", err));
 
     res.status(200).json({ success: true, message: "Admin approved successfully." });
   } catch (error) {
