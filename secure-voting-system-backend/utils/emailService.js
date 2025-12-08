@@ -2,12 +2,17 @@ const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 // Create transporter for sending emails
+// Create transporter for sending emails
 const createTransporter = () => {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+    console.error("❌ CRITICAL: EMAIL_USER or EMAIL_PASSWORD is missing in Environment Variables!");
+  }
+
   return nodemailer.createTransport({
     service: 'gmail',
     auth: {
-      user: process.env.EMAIL_USER, // Your Gmail address
-      pass: process.env.EMAIL_PASSWORD // Your Gmail app password
+      user: process.env.EMAIL_USER ? process.env.EMAIL_USER.trim() : '',
+      pass: process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.trim() : ''
     }
   });
 };
