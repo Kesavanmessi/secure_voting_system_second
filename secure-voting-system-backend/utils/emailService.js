@@ -12,6 +12,8 @@ const createTransporter = () => {
     host: 'smtp.gmail.com',
     port: 587,
     secure: false, // true for 465, false for other ports
+    logger: true, // Log to console
+    debug: true, // Include SMTP traffic in logs
     auth: {
       user: process.env.EMAIL_USER ? process.env.EMAIL_USER.trim() : '',
       pass: process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.trim() : ''
