@@ -302,6 +302,26 @@ const sendAdminRemovalEmail = async (email, username, reason) => {
   return await sendEmail(email, username, subject, html);
 };
 
+// Send Vote Confirmation Email
+const sendVoteConfirmationEmail = async (voterEmail, voterName, electionName) => {
+  const subject = `Vote Confirmed - ${electionName}`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #27ae60;">Vote Cast Successfully!</h2>
+      <p>Dear ${voterName},</p>
+      <p>This email confirms that your vote for the election <strong>${electionName}</strong> has been successfully recorded.</p>
+      <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+        <span style="font-size: 48px;">✅</span>
+        <h3 style="color: #2c3e50; margin: 10px 0;">Vote Secured</h3>
+        <p style="color: #7f8c8d; margin: 0;">Your ballot has been encrypted and stored.</p>
+      </div>
+      <p>Thank you for participating.</p>
+      <p>Best regards,<br>Secure Voting System</p>
+    </div>
+  `;
+  return await sendEmail(voterEmail, voterName, subject, html);
+};
+
 module.exports = {
   generateOTP,
   sendElectionCreationEmail,
