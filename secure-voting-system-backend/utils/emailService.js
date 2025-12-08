@@ -2,7 +2,6 @@ const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 // Create transporter for sending emails
-// Create transporter for sending emails
 const createTransporter = () => {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
     console.error("❌ CRITICAL: EMAIL_USER or EMAIL_PASSWORD is missing in Environment Variables!");
@@ -10,21 +9,18 @@ const createTransporter = () => {
 
   return nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // Use STARTTLS
+    port: 465,
+    secure: true, // Use SSL
     connectionTimeout: 60000,
     greetingTimeout: 30000,
     socketTimeout: 60000,
     dnsTimeout: 60000,
-    family: 4,
+    family: 4, // Force IPv4
     logger: true,
     debug: true,
     auth: {
       user: process.env.EMAIL_USER ? process.env.EMAIL_USER.trim() : '',
       pass: process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.trim() : ''
-    },
-    tls: {
-      rejectUnauthorized: false
     }
   });
 };
