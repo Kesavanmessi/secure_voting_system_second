@@ -20,7 +20,7 @@ function Home() {
 
   const fetchElectionStatus = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/elections/one/${voter.electionDetails.electionId}?voterId=${voter.voterId}`);
+      const response = await axios.get(`https://secure-voting-system-second.onrender.com/api/elections/one/${voter.electionDetails.electionId}?voterId=${voter.voterId}`);
       if (response.data) {
         setTicketData(response.data);
         setIsResultPublished(response.data.isResultPublished);

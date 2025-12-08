@@ -17,7 +17,7 @@ const ManageAdmins = () => {
   const fetchAdmins = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:5000/api/admins");
+      const response = await axios.get("https://secure-voting-system-second.onrender.com/api/admins");
       setAdmins(response.data.admins || []);
     } catch (error) {
       console.error("Error fetching admins:", error);
@@ -44,7 +44,7 @@ const ManageAdmins = () => {
     }
 
     try {
-      const response = await axios.post("http://localhost:5000/api/admins", newAdmin);
+      const response = await axios.post("https://secure-voting-system-second.onrender.com/api/admins", newAdmin);
       if (response.data.success) {
         setAdmins((prev) => [...prev, response.data.admin]);
         setNewAdmin({ username: "", role: "Manager Admin", password: "", adminId: "" });
@@ -66,7 +66,7 @@ const ManageAdmins = () => {
 
     if (confirmDelete) {
       try {
-        await axios.delete(`http://localhost:5000/api/admins/${id}`);
+        await axios.delete(`https://secure-voting-system-second.onrender.com/api/admins/${id}`);
         setAdmins((prev) => prev.filter((admin) => admin.adminId !== id));
         showMessage("Admin removed and notified successfully!", "success");
       } catch (error) {

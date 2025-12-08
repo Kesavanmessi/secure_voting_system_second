@@ -33,7 +33,7 @@ function CastVote() {
         const fetchCandidates = async () => {
             try {
                 const response = await axios.post(
-                    'http://localhost:5000/api/elections/electionCandidates-details',
+                    'https://secure-voting-system-second.onrender.com/api/elections/electionCandidates-details',
                     { electionId: voter.electionDetails.electionId }
                 );
 
@@ -73,7 +73,7 @@ function CastVote() {
         }
 
         try {
-            const response = await axios.post('http://localhost:5000/api/elections/cast-vote', {
+            const response = await axios.post('https://secure-voting-system-second.onrender.com/api/elections/cast-vote', {
                 electionId: voter.electionDetails.electionId,
                 candidateId: selectedCandidateId,
                 voterId: voter.voterId,

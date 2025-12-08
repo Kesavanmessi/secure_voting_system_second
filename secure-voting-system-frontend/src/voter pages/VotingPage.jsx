@@ -46,7 +46,7 @@ function VotingPage() {
 
   const fetchCandidates = async () => {
     try {
-      const response = await axios.post('http://localhost:5000/api/elections/electionCandidates-details', {
+      const response = await axios.post('https://secure-voting-system-second.onrender.com/api/elections/electionCandidates-details', {
         electionId: voter.electionDetails.electionId
       });
 
@@ -69,7 +69,7 @@ function VotingPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await axios.post('http://localhost:5000/api/elections/cast-vote', {
+      const response = await axios.post('https://secure-voting-system-second.onrender.com/api/elections/cast-vote', {
         electionId: voter.electionDetails.electionId,
         voterId: voter.voterId,
         candidateId: selectedCandidate.candidateId

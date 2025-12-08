@@ -14,7 +14,7 @@ const ManageAdminRequests = () => {
 
     const fetchRequests = async () => {
         try {
-            const response = await axios.get('http://localhost:5000/api/admins/pending/requests');
+            const response = await axios.get('https://secure-voting-system-second.onrender.com/api/admins/pending/requests');
             if (response.data.success) {
                 setRequests(response.data.requests);
             }
@@ -31,7 +31,7 @@ const ManageAdminRequests = () => {
 
     const handleApprove = async (id) => {
         try {
-            const response = await axios.post(`http://localhost:5000/api/admins/approve-signup/${id}`);
+            const response = await axios.post(`https://secure-voting-system-second.onrender.com/api/admins/approve-signup/${id}`);
             if (response.data.success) {
                 showMessage(response.data.message, 'success');
                 fetchRequests(); // Refresh list
@@ -45,7 +45,7 @@ const ManageAdminRequests = () => {
     const handleReject = async (id) => {
         if (!window.confirm("Are you sure you want to reject this request?")) return;
         try {
-            const response = await axios.delete(`http://localhost:5000/api/admins/reject-signup/${id}`);
+            const response = await axios.delete(`https://secure-voting-system-second.onrender.com/api/admins/reject-signup/${id}`);
             if (response.data.success) {
                 showMessage(response.data.message, 'success');
                 fetchRequests(); // Refresh list

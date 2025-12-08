@@ -38,7 +38,7 @@ const Login = ({ login }) => {
       if (isSignup) {
         // Handle Admin Signup
         try {
-          const response = await axios.post('http://localhost:5000/api/admins/signup', {
+          const response = await axios.post('https://secure-voting-system-second.onrender.com/api/admins/signup', {
             username,
             email,
             password,
@@ -59,7 +59,7 @@ const Login = ({ login }) => {
       } else {
         // Handle Admin Login
         try {
-          const response = await axios.post('http://localhost:5000/api/auth/admin-login', {
+          const response = await axios.post('https://secure-voting-system-second.onrender.com/api/auth/admin-login', {
             username,
             password,
           });
@@ -83,7 +83,7 @@ const Login = ({ login }) => {
       }
 
       try {
-        const response = await axios.post('http://localhost:5000/api/elections/voter-login', {
+        const response = await axios.post('https://secure-voting-system-second.onrender.com/api/elections/voter-login', {
           electionName,
           voterId,
           password,
@@ -123,7 +123,7 @@ const Login = ({ login }) => {
     }
 
     try {
-      const response = await axios.post('http://localhost:5000/api/elections/voter-verify-otp', {
+      const response = await axios.post('https://secure-voting-system-second.onrender.com/api/elections/voter-verify-otp', {
         electionId: voterData.electionDetails.electionId,
         voterId: voterData.voterId,
         otp: otp,
@@ -149,7 +149,7 @@ const Login = ({ login }) => {
     setSuccessMessage('');
 
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/forgot-password', {
+      const response = await axios.post('https://secure-voting-system-second.onrender.com/api/auth/forgot-password', {
         adminId: forgotEmail
       });
 
@@ -178,7 +178,7 @@ const Login = ({ login }) => {
     }
 
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/reset-password', {
+      const response = await axios.post('https://secure-voting-system-second.onrender.com/api/auth/reset-password', {
         adminId: forgotEmail,
         otp: forgotOtp,
         newPassword: newPassword

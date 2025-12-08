@@ -22,8 +22,8 @@ const RequestsForElection = () => {
 
   const fetchRequests = async () => {
     try {
-      const createdResponse = await axios.get('http://localhost:5000/api/elections/pending');
-      const modifiedResponse = await axios.get('http://localhost:5000/api/elections/pending-modifications');
+      const createdResponse = await axios.get('https://secure-voting-system-second.onrender.com/api/elections/pending');
+      const modifiedResponse = await axios.get('https://secure-voting-system-second.onrender.com/api/elections/pending-modifications');
       setCreatedRequests(createdResponse.data);
       setModifiedRequests(modifiedResponse.data);
     } catch (error) {
@@ -33,7 +33,7 @@ const RequestsForElection = () => {
 
   const handleAcceptCreatedRequest = async (requestId) => {
     try {
-      await axios.put(`http://localhost:5000/api/elections/approve/${requestId}`, {
+      await axios.put(`https://secure-voting-system-second.onrender.com/api/elections/approve/${requestId}`, {
         name: admin.username
       });
       setCreatedRequests((prev) => prev.filter(request => request._id !== requestId));
@@ -60,8 +60,8 @@ const RequestsForElection = () => {
 
     try {
       const endpoint = rejectingType === 'created'
-        ? `http://localhost:5000/api/elections/reject-created/${rejectingId}`
-        : `http://localhost:5000/api/elections/reject-modification/${rejectingId}`;
+        ? `https://secure-voting-system-second.onrender.com/api/elections/reject-created/${rejectingId}`
+        : `https://secure-voting-system-second.onrender.com/api/elections/reject-modification/${rejectingId}`;
 
       await axios.post(endpoint, {
         reason: rejectionReason,
@@ -88,7 +88,7 @@ const RequestsForElection = () => {
 
   const handleAcceptModifiedRequest = async (requestId) => {
     try {
-      await axios.put(`http://localhost:5000/api/elections/approve-modification/${requestId}`, {
+      await axios.put(`https://secure-voting-system-second.onrender.com/api/elections/approve-modification/${requestId}`, {
         name: admin.username
       });
       setModifiedRequests((prev) => prev.filter(request => request._id !== requestId));
@@ -102,7 +102,7 @@ const RequestsForElection = () => {
 
   const handleViewDifference = async (request) => {
     try {
-      const { data } = await axios.get(`http://localhost:5000/api/elections/difference/${request.originalElectionId}`);
+      const { data } = await axios.get(`https://secure-voting-system-second.onrender.com/api/elections/difference/${request.originalElectionId}`);
       setDifference(data.differences);
       setViewedModifiedElection(request); // Also set this to show details
       setViewedElection(null);

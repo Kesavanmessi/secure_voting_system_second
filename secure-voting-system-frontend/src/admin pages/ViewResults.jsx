@@ -39,7 +39,7 @@ function ViewResults() {
   const fetchFinishedElections = async () => {
     try {
       const token = localStorage.getItem("secureVoting_adminToken");
-      const response = await axios.get('http://localhost:5000/api/elections/finished', {
+      const response = await axios.get('https://secure-voting-system-second.onrender.com/api/elections/finished', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setElections(response.data);
@@ -65,7 +65,7 @@ function ViewResults() {
     }
 
     try {
-      const response = await axios.get(`http://localhost:5000/api/elections/results/${election._id}`);
+      const response = await axios.get(`https://secure-voting-system-second.onrender.com/api/elections/results/${election._id}`);
       const resultData = response.data;
 
       if (resultData.success) {
@@ -86,7 +86,7 @@ function ViewResults() {
 
   const moveToFinishedElections = async (electionId) => {
     try {
-      await axios.post(`http://localhost:5000/api/elections/move-to-finished/${electionId}`);
+      await axios.post(`https://secure-voting-system-second.onrender.com/api/elections/move-to-finished/${electionId}`);
       setElections((prev) => prev.filter((e) => e._id !== electionId));
       showMessage('Election moved to finished (archived).', 'success');
       if (selectedElection && selectedElection._id === electionId) {

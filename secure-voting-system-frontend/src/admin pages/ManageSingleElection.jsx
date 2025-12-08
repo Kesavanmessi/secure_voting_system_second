@@ -27,7 +27,7 @@ function ManageSingleElection() {
   useEffect(() => {
     const fetchElectionData = async () => {
       try {
-        const { data } = await axios.get(`http://localhost:5000/api/elections/one/${id}`);
+        const { data } = await axios.get(`https://secure-voting-system-second.onrender.com/api/elections/one/${id}`);
         setElection(data);
         setElectionName(data.electionName);
         setDescription(data.description); 
@@ -48,7 +48,7 @@ function ManageSingleElection() {
 
   const verifyElectionName = async () => {
     try {
-      const response = await axios.post('http://localhost:5000/api/elections/verify-name', { electionName });
+      const response = await axios.post('https://secure-voting-system-second.onrender.com/api/elections/verify-name', { electionName });
       if (!response.data.exists) {
         setIsElectionNameVerified(true);
         setMessage("Election name is available.");
@@ -73,7 +73,7 @@ function ManageSingleElection() {
     }
 
     try {
-      const response = await axios.get(`http://localhost:5000/api/elections/searchvoterLists/${newVoter}`);
+      const response = await axios.get(`https://secure-voting-system-second.onrender.com/api/elections/searchvoterLists/${newVoter}`);
       if (response.data.exists) {
         if (!voters.includes(newVoter)) {
           setVoters([...voters, newVoter]);
@@ -102,7 +102,7 @@ function ManageSingleElection() {
     }
 
     try {
-      const response = await axios.get(`http://localhost:5000/api/elections/searchCandidateLists/${newCandidate}`);
+      const response = await axios.get(`https://secure-voting-system-second.onrender.com/api/elections/searchCandidateLists/${newCandidate}`);
       if (response.data.exists) {
         if (!candidates.includes(newCandidate)) {
           setCandidates([...candidates, newCandidate]);
@@ -162,12 +162,12 @@ function ManageSingleElection() {
         const updatedCandidates = candidates.filter((c) => !deletionList.candidates.includes(c));
         
         await Promise.all(deletionList.voters.map(voter => 
-          axios.delete(`http://localhost:5000/api/elections/${id}/list`, {
+          axios.delete(`https://secure-voting-system-second.onrender.com/api/elections/${id}/list`, {
             data: { listName: voter, listType: 'voterLists' }
           })
         ));
         await Promise.all(deletionList.candidates.map(candidate => 
-          axios.delete(`http://localhost:5000/api/elections/${id}/list`, {
+          axios.delete(`https://secure-voting-system-second.onrender.com/api/elections/${id}/list`, {
             data: { listName: candidate, listType: 'candidateLists' }
           })
         ));
@@ -195,7 +195,7 @@ function ManageSingleElection() {
           modifiedBy: admin.username,
         };
 
-        await axios.post('http://localhost:5000/api/elections/request-modification', modificationRequest);
+        await axios.post('https://secure-voting-system-second.onrender.com/api/elections/request-modification', modificationRequest);
         setMessage("Modification request submitted for approval.");
         setMessageType("success");
       }
@@ -230,7 +230,7 @@ function ManageSingleElection() {
           candidates,
           modifiedBy: admin.username,
         };
-        await axios.put(`http://localhost:5000/api/elections/one/${id}`, updateData);
+        await axios.put(`https://secure-voting-system-second.onrender.com/api/elections/one/${id}`, updateData);
         setMessage(`Election "${electionName}" updated successfully.`);
         setMessageType("success");
       } else {

@@ -23,7 +23,7 @@ function VoterResultPage() {
   const fetchResults = async () => {
     try {
       // First check if results are published
-      const statusRes = await axios.post('http://localhost:5000/api/elections/is-result-published', {
+      const statusRes = await axios.post('https://secure-voting-system-second.onrender.com/api/elections/is-result-published', {
         electionId: voter.electionDetails.electionId
       });
 
@@ -34,7 +34,7 @@ function VoterResultPage() {
       }
 
       // Fetch actual results
-      const response = await axios.get(`http://localhost:5000/api/elections/results/${voter.electionDetails.electionId}`);
+      const response = await axios.get(`https://secure-voting-system-second.onrender.com/api/elections/results/${voter.electionDetails.electionId}`);
 
       if (response.data.success) {
         const candidates = response.data.candidates;

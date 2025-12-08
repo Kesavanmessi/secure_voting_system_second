@@ -17,7 +17,7 @@ const MyElectionRequests = () => {
 
     const fetchMyRequests = async () => {
         try {
-            const response = await axios.get(`http://localhost:5000/api/elections/my-requests?username=${admin.username}`);
+            const response = await axios.get(`https://secure-voting-system-second.onrender.com/api/elections/my-requests?username=${admin.username}`);
             setRequests(response.data);
         } catch (error) {
             console.error('Error fetching my requests:', error);

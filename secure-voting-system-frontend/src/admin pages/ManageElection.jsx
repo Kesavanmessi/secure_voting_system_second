@@ -25,7 +25,7 @@ function ManageElection() {
     try {
       setLoading(true);
       const token = localStorage.getItem("secureVoting_adminToken");
-      const response = await axios.get('http://localhost:5000/api/elections/fetching', {
+      const response = await axios.get('https://secure-voting-system-second.onrender.com/api/elections/fetching', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setElections(response.data);
@@ -52,7 +52,7 @@ function ManageElection() {
 
     if (admin.role === 'Head Admin') {
       try {
-        await axios.delete(`http://localhost:5000/api/elections/trash`, { params: { id } });
+        await axios.delete(`https://secure-voting-system-second.onrender.com/api/elections/trash`, { params: { id } });
         setElections(elections.filter((e) => e._id !== id));
         alert('Election deleted and voters notified.');
       } catch (error) {
@@ -65,7 +65,7 @@ function ManageElection() {
       if (!reason) return;
 
       try {
-        await axios.post('http://localhost:5000/api/elections/request-delete', {
+        await axios.post('https://secure-voting-system-second.onrender.com/api/elections/request-delete', {
           electionId: id,
           electionName: name,
           reason,
@@ -108,7 +108,7 @@ function ManageElection() {
           candidates: editingElection.candidateLists
         };
 
-        await axios.put(`http://localhost:5000/api/elections/one/${editingElection._id}`, payload);
+        await axios.put(`https://secure-voting-system-second.onrender.com/api/elections/one/${editingElection._id}`, payload);
 
         alert('Election updated and voters notified.');
         setIsEditModalOpen(false);
@@ -121,7 +121,7 @@ function ManageElection() {
     } else {
       // Manager Admin Request Flow
       try {
-        await axios.post('http://localhost:5000/api/elections/request-modification', {
+        await axios.post('https://secure-voting-system-second.onrender.com/api/elections/request-modification', {
           electionId: editingElection._id,
           updatedFields: {
             startTime: editFormData.startTime,

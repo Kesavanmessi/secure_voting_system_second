@@ -71,7 +71,7 @@ function VoterViewResults() {
 
         const fetchResults = async () => {
             try {
-                const response = await axios.get(`http://localhost:5000/api/elections/results/${voter.electionDetails.electionId}`);
+                const response = await axios.get(`https://secure-voting-system-second.onrender.com/api/elections/results/${voter.electionDetails.electionId}`);
                 if (response.data.success) {
                     setCandidates(response.data.candidates);
                     setWinner(response.data.winner);

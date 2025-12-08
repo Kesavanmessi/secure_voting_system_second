@@ -29,7 +29,7 @@ function CreateElection() {
       return false;
     }
     try {
-      const response = await axios.post('http://localhost:5000/api/elections/verify-name', { electionName });
+      const response = await axios.post('https://secure-voting-system-second.onrender.com/api/elections/verify-name', { electionName });
       if (response.data.exists) {
         setMessage("An election with this name already exists.");
         return false;
@@ -48,7 +48,7 @@ function CreateElection() {
     formData.append('listname', listname);
 
     try {
-      await axios.post(`http://localhost:5000/api/upload/${type}`, formData, {
+      await axios.post(`https://secure-voting-system-second.onrender.com/api/upload/${type}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -128,8 +128,8 @@ function CreateElection() {
 
     try {
       const endpoint = admin?.role === 'Head Admin'
-        ? 'http://localhost:5000/api/elections/create'
-        : 'http://localhost:5000/api/elections/submit';
+        ? 'https://secure-voting-system-second.onrender.com/api/elections/create'
+        : 'https://secure-voting-system-second.onrender.com/api/elections/submit';
 
       await axios.post(endpoint, electionData);
 
