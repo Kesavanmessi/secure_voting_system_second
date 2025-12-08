@@ -185,7 +185,7 @@ function ManageElection() {
               // Sticking to: Show all, but restrict actions.
 
               return (
-                <div key={election._id} className="group relative bg-slate-800 border border-slate-700 rounded-2xl p-6 hover:border-cyan-500/50 transition-all duration-300">
+                <div key={election._id} className="group relative bg-slate-800 border border-slate-700 rounded-2xl p-6 hover:border-cyan-500/50 transition-all duration-300 flex flex-col">
                   {/* Status Badge */}
                   <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide
                     ${status === 'Upcoming' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/20' : ''}
@@ -195,8 +195,15 @@ function ManageElection() {
                     {status}
                   </div>
 
-                  {/* Hover Stats Section - Compact & Top Right */}
-                  <div className="absolute top-14 right-4 w-40 p-2 bg-slate-900/95 border border-slate-700 rounded-lg backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-300 z-20 text-center transform translate-y-1 group-hover:translate-y-0 pointer-events-none shadow-xl">
+                  <h3 className="text-xl font-bold text-white mb-2 pr-20 truncate">{election.electionName}</h3>
+                  <div className="space-y-2 text-sm text-slate-400 mb-6">
+                    <p><span className="text-slate-500">Starts:</span> {new Date(election.startTime).toLocaleString()}</p>
+                    <p><span className="text-slate-500">Ends:</span> {new Date(election.endTime).toLocaleString()}</p>
+                    <p><span className="text-slate-500">Created By:</span> {election.createdBy}</p>
+                  </div>
+
+                  {/* Stats Section */}
+                  <div className="relative md:absolute md:top-14 md:right-4 w-full md:w-40 mb-6 md:mb-0 p-2 bg-slate-900/95 border border-slate-700 rounded-lg backdrop-blur-md opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-300 z-20 text-center transform md:translate-y-1 md:group-hover:translate-y-0 shadow-xl">
                     <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-1">Turnout</p>
                     <div className="flex justify-center items-end gap-1 mb-1">
                       <span className="text-lg font-bold text-white leading-none">{election.stats?.voted || 0}</span>
@@ -209,13 +216,6 @@ function ManageElection() {
                       ></div>
                     </div>
                     <p className="text-[10px] text-emerald-400 font-bold">{election.stats?.percentage || 0}%</p>
-                  </div>
-
-                  <h3 className="text-xl font-bold text-white mb-2 pr-20 truncate">{election.electionName}</h3>
-                  <div className="space-y-2 text-sm text-slate-400 mb-6">
-                    <p><span className="text-slate-500">Starts:</span> {new Date(election.startTime).toLocaleString()}</p>
-                    <p><span className="text-slate-500">Ends:</span> {new Date(election.endTime).toLocaleString()}</p>
-                    <p><span className="text-slate-500">Created By:</span> {election.createdBy}</p>
                   </div>
 
                   {/* Actions */}

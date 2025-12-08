@@ -43,6 +43,7 @@ const sendEmail = async (toEmail, toName, subject, htmlContent) => {
 
 // Send election creation notification
 const sendElectionCreationEmail = async (voterEmail, voterName, electionName, voterId, randomPassword) => {
+  const loginLink = `${FRONTEND_URL}/voter-login?electionName=${encodeURIComponent(electionName)}&voterId=${voterId}`;
   const subject = `Election Registration - ${electionName}`;
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -57,8 +58,9 @@ const sendElectionCreationEmail = async (voterEmail, voterName, electionName, vo
         <p><strong>Password:</strong> <span style="background-color: #fff3cd; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: bold;">${randomPassword}</span></p>
       </div>
       <div style="text-align: center; margin: 30px 0;">
-          <a href="${FRONTEND_URL}/voter-login" style="background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Login to Vote</a>
+          <a href="${loginLink}" style="background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Login to Vote</a>
       </div>
+      <p style="text-align: center; font-size: 12px; color: #7f8c8d;">Or manually click: <a href="${loginLink}">${loginLink}</a></p>
       <div style="background-color: #d1ecf1; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #17a2b8;">
         <h4 style="color: #0c5460; margin-top: 0;">Important Security Notice:</h4>
         <p style="margin-bottom: 0;">You will need both this password and an OTP (sent to your email) to log in. Keep this password secure and do not share it with anyone.</p>
@@ -240,35 +242,59 @@ const sendAdminWelcomeEmail = async (email, username, password) => {
   return await sendEmail(email, username, subject, html);
 };
 
-const sendVoteConfirmationEmail = async (voterEmail, voterName, electionName) => {
-  const subject = `Vote Confirmation - ${electionName} `;
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #27ae60;">Vote Recorded Successfully</h2>
-      <p>Dear ${voterName},</p>
-      <p>Your vote for the election <strong>${electionName}</strong> has been securely recorded.</p>
-      
-      <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #27ae60;">
-        <p style="margin: 0; color: #2c3e50;">We value your participation in this democratic process. Your choice remains confidential.</p>
-      </div>
+const sendCandidateResultEmail = async (email, candidateName, electionName, rank, voteCount, totalVotes, winnerName) => {
+  const subject = `Election Results: ${electionName}`;
+  const isWinner = candidateName === winnerName;
+  const statusColor = isWinner ? '#2ecc71' : '#34495e';
 
-      <p>Results will be available on the portal once the election concludes.</p>
-      <div style="text-align: center; margin: 30px 0;">
-          <a href="${FRONTEND_URL}/voter-login" style="background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Return to Portal</a>
-      </div>
-      <p>Best regards,<br>Secure Voting System</p>
-    </div>
-  `;
-  return await sendEmail(voterEmail, voterName, subject, html);
+  const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
+            <div style="background-color: ${statusColor}; color: white; padding: 20px; text-align: center;">
+                <h2 style="margin: 0;">Election Concluded</h2>
+                <p style="margin: 5px 0 0 0; opacity: 0.9;">${electionName}</p>
+            </div>
+            <div style="padding: 30px;">
+                <p>Hello <strong>${candidateName}</strong>,</p>
+                <p>The election <strong>${electionName}</strong> has officially ended. Here is your performance report:</p>
+                
+                <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span style="color: #7f8c8d;">Votes Received:</span>
+                        <span style="font-weight: bold;">${voteCount}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span style="color: #7f8c8d;">Total Votes Cast:</span>
+                        <span style="font-weight: bold;">${totalVotes}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #7f8c8d;">Final Rank:</span>
+                        <span style="font-weight: bold;">#${rank}</span>
+                    </div>
+                </div>
+
+                <div style="text-align: center; border-top: 1px solid #eee; padding-top: 20px;">
+                    <p style="margin-bottom: 5px; color: #7f8c8d; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Winner</p>
+                    <h3 style="margin: 0; color: #2c3e50;">${winnerName}</h3>
+                    ${isWinner ? '<p style="color: #2ecc71; font-weight: bold; margin-top: 10px;">Congratulations! You have won the election!</p>' : ''}
+                </div>
+            </div>
+        </div>
+    `;
+  return await sendEmail(email, candidateName, subject, html);
 };
 
-const sendAdminRemovalEmail = async (email, username) => {
+const sendAdminRemovalEmail = async (email, username, reason) => {
   const subject = 'Admin Access Revoked - Secure Voting System';
+  const reasonText = reason ? `<div style="background-color: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin: 15px 0;">
+    <strong>Reason for Removal:</strong> ${reason}
+  </div>` : '';
+
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #c0392b;">Access Revoked</h2>
       <p>Hello ${username},</p>
       <p>Your admin access to the <strong>Secure Voting System</strong> has been revoked by the Head Admin.</p>
+      ${reasonText}
       <p>You will no longer be able to log in to the admin dashboard.</p>
       <p>If you believe this is an error, please contact the Head Admin directly.</p>
     </div>
@@ -288,5 +314,6 @@ module.exports = {
   sendAdminRemovalEmail,
   sendPasswordResetOTPEmail,
   sendAdminWelcomeEmail,
-  sendVoteConfirmationEmail
+  sendVoteConfirmationEmail,
+  sendCandidateResultEmail
 };

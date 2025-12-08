@@ -201,21 +201,6 @@ function ElectionDetails() {
         </div>
 
         <div className="flex justify-center gap-4">
-          {!isOngoing && !isFinished && (
-            <div className="px-6 py-3 bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 rounded-lg">
-              Election is not currently active.
-            </div>
-          )}
-          {isOngoing && (
-            <div className="px-6 py-3 bg-green-500/10 border border-green-500/20 text-green-400 rounded-lg">
-              Election is currently active. Go to Dashboard to Vote.
-            </div>
-          )}
-          {isFinished && (
-            <div className="px-6 py-3 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-lg">
-              Election has ended.
-            </div>
-          )}
         </div>
       </div>
     </div>

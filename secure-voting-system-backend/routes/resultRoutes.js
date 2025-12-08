@@ -113,20 +113,43 @@ router.get('/results/:id', async (req, res) => {
         let isTie = election.isTie;
 
         // If winner is NOT set in DB, calculate it dynamically (Current Leader)
+        // If winner is NOT set in DB, calculate it dynamically (Current Leader)
         if (!winner) {
             let maxVotes = -1;
             candidates.forEach(c => {
                 if (c.votes > maxVotes) maxVotes = c.votes;
             });
 
-            if (maxVotes >= 0) { // Only if there are candidates (votes can be 0)
+            if (maxVotes >= 0) { // Only if there are candidates
                 const topCandidates = candidates.filter(c => c.votes === maxVotes);
+                const isFinished = new Date() > new Date(election.endTime);
+
                 if (topCandidates.length > 1) {
                     isTie = true;
-                    winner = null; // No single winner yet
+                    if (isFinished) {
+                        // Lazily resolve tie/winner for finished elections and persist it
+                        const randomIndex = Math.floor(Math.random() * topCandidates.length);
+                        winner = topCandidates[randomIndex];
+
+                        // Persist to DB so it doesn't change on refresh
+                        await Election.findByIdAndUpdate(electionId, {
+                            winner: winner,
+                            isTie: true
+                        });
+                    } else {
+                        winner = null; // Live tie, don't pick yet
+                    }
                 } else {
                     isTie = false;
                     winner = topCandidates[0];
+
+                    if (isFinished) {
+                        // Persist clear winner for finished election
+                        await Election.findByIdAndUpdate(electionId, {
+                            winner: winner,
+                            isTie: false
+                        });
+                    }
                 }
             }
         } else if (winner && winner.candidateId) {

@@ -99,6 +99,7 @@ router.put("/:id", async (req, res) => {
 // 4. DELETE remove an admin
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
+  const { reason } = req.body;
 
   try {
     const admin = await Admin.findOne({ adminId: id });
@@ -111,7 +112,7 @@ router.delete("/:id", async (req, res) => {
 
     // Attempt to send email notification (Non-blocking)
     if (admin.adminId && admin.adminId.includes('@')) {
-      sendAdminRemovalEmail(admin.adminId, admin.username).catch(err => console.error("Background Email Error:", err));
+      sendAdminRemovalEmail(admin.adminId, admin.username, reason).catch(err => console.error("Background Email Error:", err));
     }
 
     await Admin.deleteOne({ adminId: id });

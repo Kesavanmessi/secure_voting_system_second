@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const candidateItemSchema = new mongoose.Schema({
   candidateId: { type: String, required: false }, // Made optional, generated if missing
   candidateName: { type: String, required: true },
+  email: { type: String, required: false }, // Added for result notifications
   profile: { type: String, required: false }, // URL to profile image
 }, { strict: false });
 

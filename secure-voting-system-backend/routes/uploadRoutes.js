@@ -33,7 +33,6 @@ router.post('/candidates', upload.single('file'), async (req, res) => {
     }
 
     try {
-        // Check if list exists
         if (await Candidate.findOne({ listname })) {
             deleteFile(file.path);
             return res.status(400).json({ success: false, message: "Candidate list with this name already exists." });
@@ -48,19 +47,30 @@ router.post('/candidates', upload.single('file'), async (req, res) => {
             throw new Error("Excel sheet is empty.");
         }
 
-        const candidates = data.map(row => {
-            if (!row.candidateId || !row.candidateName) {
-                throw new Error("Excel sheet must contain 'candidateId' and 'candidateName' columns.");
+        const candidates = data.map((row, index) => {
+            const rowCandidateName = row.candidateName || row.CandidateName || row.Name || row.name;
+            let rowCandidateId = row.candidateId || row.CandidateId || row.ID || row.id;
+            const rowProfile = row.profile || row.Profile || row.image || row.Image || null;
+            const rowEmail = row.email || row.Email || null;
+
+            if (!rowCandidateName) {
+                throw new Error("Excel sheet must contain 'candidateName' column.");
             }
-            // Map 'Profile' or 'Image' column to 'profile' field
+
+            // Auto-generate ID if missing: First 4 letters of listname + "C" + numeric unique
+            if (!rowCandidateId) {
+                const prefix = listname.substring(0, 4).toUpperCase().padEnd(4, 'X');
+                const numeric = Date.now().toString().slice(-6) + index; // timestamp suffix
+                rowCandidateId = `${prefix}C${numeric}`;
+            }
+
             return {
-                ...row,
-                profile: row.profile || row.Profile || row.image || row.Image || null
+                candidateId: rowCandidateId,
+                candidateName: rowCandidateName,
+                profile: rowProfile,
+                email: rowEmail
             };
         });
-
-        // NOTA auto-addition removed to prevent duplicates with user-supplied lists.
-        // If NOTA is required, it should be included in the uploaded Excel file.
 
         const newCandidateList = new Candidate({
             listname,
@@ -88,7 +98,6 @@ router.post('/voters', upload.single('file'), async (req, res) => {
     }
 
     try {
-        // Check if list exists
         if (await Voter.findOne({ listname })) {
             deleteFile(file.path);
             return res.status(400).json({ success: false, message: "Voter list with this name already exists." });
@@ -103,10 +112,24 @@ router.post('/voters', upload.single('file'), async (req, res) => {
             throw new Error("Excel sheet is empty.");
         }
 
-        const voters = data.map(row => {
-            if (!row.voterId || !row.voterName || !row.email || !row.address || !row.age) {
-                throw new Error("Excel sheet must contain voterId, voterName, email, address, age.");
+        const voters = data.map((row, index) => {
+            let rowVoterId = row.voterId || row.VoterId || row.ID || row.id;
+            const rowVoterName = row.voterName || row.VoterName || row.Name || row.name;
+            const rowEmail = row.email || row.Email;
+            const rowAddress = row.address || row.Address;
+            const rowAge = row.age || row.Age;
+
+            if (!rowVoterName || !rowEmail || !rowAddress || !rowAge) {
+                throw new Error("Excel sheet must contain voterName, email, address, age.");
             }
+
+            // Auto-generate ID if missing: First 4 letters of listname + "V" + numeric unique
+            if (!rowVoterId) {
+                const prefix = listname.substring(0, 4).toUpperCase().padEnd(4, 'X');
+                const numeric = Date.now().toString().slice(-6) + index;
+                rowVoterId = `${prefix}V${numeric}`;
+            }
+
             // Generate password if not present
             if (!row.password) {
                 const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
@@ -116,7 +139,16 @@ router.post('/voters', upload.single('file'), async (req, res) => {
                 }
                 row.password = password;
             }
-            return row;
+
+            return {
+                ...row,
+                voterId: rowVoterId,
+                voterName: rowVoterName,
+                email: rowEmail,
+                address: rowAddress,
+                age: rowAge,
+                password: row.password
+            };
         });
 
         const newVoterList = new Voter({

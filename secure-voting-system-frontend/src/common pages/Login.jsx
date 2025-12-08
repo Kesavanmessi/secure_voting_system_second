@@ -18,6 +18,20 @@ const Login = ({ login }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Auto-fill from URL params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlElectionName = params.get('electionName');
+    const urlVoterId = params.get('voterId');
+
+    if (urlElectionName) {
+      setElectionName(urlElectionName);
+    }
+    if (urlVoterId) {
+      setVoterId(urlVoterId);
+    }
+  }, []);
+
   // Forgot Password State
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');

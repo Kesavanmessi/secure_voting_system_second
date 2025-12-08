@@ -1236,7 +1236,7 @@ router.post('/voter-verify-otp', async (req, res) => {
         const token = jwt.sign(
             { id: voterFound.voterId, role: 'Voter' },
             process.env.JWT_SECRET,
-            { expiresIn: '20m' }
+            { expiresIn: '30m' }
         );
 
         // Return success response with voter and election details
@@ -1457,6 +1457,52 @@ router.post('/cast-vote', async (req, res) => {
                     winner: winner,
                     isTie: isTie
                 });
+
+                // --- Send Candidate Result Emails ---
+                try {
+                    const allResults = [];
+                    if (ec && ec.candidates) {
+                        ec.candidates.forEach(c => {
+                            const votes = decryptVoteCount(c.voteCount);
+                            const details = allCandidatesMap.get(c.candidateId);
+                            if (details) {
+                                const name = details.candidateName || details.name || 'Unknown Candidate';
+                                allResults.push({
+                                    candidateId: c.candidateId,
+                                    name: name,
+                                    email: details.email,
+                                    voteCount: votes
+                                });
+                            }
+                        });
+
+                        // Sort by votes descending
+                        allResults.sort((a, b) => b.voteCount - a.voteCount);
+
+                        // Assign ranks
+                        let currentRank = 1;
+                        for (let i = 0; i < allResults.length; i++) {
+                            if (i > 0 && allResults[i].voteCount < allResults[i - 1].voteCount) {
+                                currentRank = i + 1;
+                            }
+                            allResults[i].rank = currentRank;
+                        }
+
+                        // Send Emails to Candidates
+                        const emailService = require('../utils/emailService');
+                        allResults.forEach(r => {
+                            if (r.email && r.candidateId !== 'C1NOTA2') {
+                                if (emailService.sendCandidateResultEmail) {
+                                    emailService.sendCandidateResultEmail(r.email, r.name, endedElection.electionName, r.rank, r.voteCount, totalVoters, winnerName || 'No Winner')
+                                        .catch(err => console.error(`Failed to send result email to candidate ${r.email}:`, err));
+                                }
+                            }
+                        });
+                    }
+                } catch (candidateEmailError) {
+                    console.error('Error sending candidate result emails:', candidateEmailError);
+                }
+                // ------------------------------------
 
                 // 3. Send End Emails with Winner
                 votersDoc.voters.forEach(v => {
