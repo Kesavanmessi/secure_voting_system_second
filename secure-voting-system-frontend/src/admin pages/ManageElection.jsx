@@ -102,8 +102,8 @@ function ManageElection() {
       try {
         const payload = {
           ...editingElection,
-          startTime: editFormData.startTime,
-          endTime: editFormData.endTime,
+          startTime: new Date(editFormData.startTime).toISOString(),
+          endTime: new Date(editFormData.endTime).toISOString(),
           voters: editingElection.voterLists,
           candidates: editingElection.candidateLists
         };
@@ -124,8 +124,8 @@ function ManageElection() {
         await axios.post('https://secure-voting-system-second.onrender.com/api/elections/request-modification', {
           electionId: editingElection._id,
           updatedFields: {
-            startTime: editFormData.startTime,
-            endTime: editFormData.endTime
+            startTime: new Date(editFormData.startTime).toISOString(),
+            endTime: new Date(editFormData.endTime).toISOString()
           },
           modifiedBy: admin.username
         });

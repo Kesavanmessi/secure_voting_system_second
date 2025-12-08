@@ -121,8 +121,8 @@ function CreateElection() {
       createdBy: admin?.username || 'admin1',
       voterLists: [voterListName],
       candidateLists: [candidateListName],
-      startTime,
-      endTime,
+      startTime: new Date(startTime).toISOString(),
+      endTime: new Date(endTime).toISOString(),
       approvedBy: admin?.role === 'Head Admin' ? admin?.username : null
     };
 
