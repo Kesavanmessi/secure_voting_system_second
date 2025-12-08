@@ -10,10 +10,11 @@ const createTransporter = () => {
 
   return nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // true for 465, false for other ports
-    logger: true, // Log to console
-    debug: true, // Include SMTP traffic in logs
+    port: 465, // SSL Port often bypasses timeouts on cloud
+    secure: true, // Use SSL
+    connectionTimeout: 10000, // Explicit timeout
+    logger: true,
+    debug: true,
     auth: {
       user: process.env.EMAIL_USER ? process.env.EMAIL_USER.trim() : '',
       pass: process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.trim() : ''

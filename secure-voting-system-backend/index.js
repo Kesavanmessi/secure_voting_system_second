@@ -13,6 +13,9 @@ const startScheduler = require('./scheduler');
 
 const app = express();
 
+// Required for Render/Vercel (Load Balancers)
+app.set('trust proxy', 1);
+
 // Connect to the database
 connectDB();
 
