@@ -46,10 +46,10 @@ const ProtectedRoute = ({ element, allowedRoles, redirectPath = '/' }) => {
   }
 
   if (admin && allowedRoles.includes(admin.role)) {
-    return element;
+    return <>{element}</>;
   }
   if (voter && allowedRoles.includes('Voter')) {
-    return element;
+    return <>{element}</>;
   }
   return <Navigate to={redirectPath} />;
 };
