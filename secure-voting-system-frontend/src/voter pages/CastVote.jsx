@@ -66,7 +66,7 @@ function CastVote() {
             setMessageType('error');
             return;
         }
-        if (voter.voterName !== voterName) {
+        if (voter.voterName.trim() !== voterName.trim()) {
             setMessage('You entered the wrong name. Please enter the correct name shown in home.');
             setMessageType('error');
             return;
