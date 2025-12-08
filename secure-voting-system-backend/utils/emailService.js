@@ -4,10 +4,12 @@ require('dotenv').config();
 // Configure Brevo API Client
 const defaultClient = SibApiV3Sdk.ApiClient.instance;
 const apiKey = defaultClient.authentications['api-key'];
-// Use a specific API KEY variable for clarity, fallback to EMAIL_PASSWORD if user reuses it
 apiKey.apiKey = process.env.BREVO_API_KEY || process.env.EMAIL_PASSWORD;
 
 const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+
+// Define Frontend URL (Use Env Var or default to localhost for dev)
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 // Generate OTP
 const generateOTP = () => {
@@ -55,7 +57,7 @@ const sendElectionCreationEmail = async (voterEmail, voterName, electionName, vo
         <p><strong>Password:</strong> <span style="background-color: #fff3cd; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: bold;">${randomPassword}</span></p>
       </div>
       <div style="text-align: center; margin: 30px 0;">
-          <a href="https://secure-voting-system-frontend.vercel.app/voter-login" style="background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Login to Vote</a>
+          <a href="${FRONTEND_URL}/voter-login" style="background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Login to Vote</a>
       </div>
       <div style="background-color: #d1ecf1; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #17a2b8;">
         <h4 style="color: #0c5460; margin-top: 0;">Important Security Notice:</h4>
@@ -84,7 +86,7 @@ const sendElectionStartEmail = async (voterEmail, voterName, electionName, start
         <p><strong>End Time:</strong> ${new Date(endTime).toLocaleString()}</p>
       </div>
       <div style="text-align: center; margin: 30px 0;">
-          <a href="https://secure-voting-system-frontend.vercel.app/voter-login" style="background-color: #27ae60; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Cast Your Vote Now</a>
+          <a href="${FRONTEND_URL}/voter-login" style="background-color: #27ae60; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Cast Your Vote Now</a>
       </div>
       <p>Please log in using your Voter ID and Password.</p>
       <p>Best regards,<br>Secure Voting System</p>
@@ -113,7 +115,7 @@ const sendElectionEndEmail = async (voterEmail, voterName, electionName, winnerN
       </div>
       <p style="text-align: center; color: #7f8c8d;">Full results including vote counts and margins are available in the voting application.</p>
       <div style="text-align: center; margin: 30px 0;">
-          <a href="https://secure-voting-system-frontend.vercel.app/voter-login" style="background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">View Full Results</a>
+          <a href="${FRONTEND_URL}/voter-login" style="background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">View Full Results</a>
       </div>
       <p>Thank you for participating in the democratic process.</p>
       <p>Best regards,<br>Secure Voting System</p>
@@ -150,7 +152,7 @@ const sendAdminApprovalEmail = async (email, username) => {
       <p>Your request for <strong>Manager Admin</strong> access has been approved by the Head Admin.</p>
       <p>You can now log in to the admin dashboard using your credentials.</p>
       <p>
-        <a href="https://secure-voting-system-frontend.vercel.app/admin-login" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login to Dashboard</a>
+        <a href="${FRONTEND_URL}/admin-login" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login to Dashboard</a>
       </p>
       <p>If you did not request this, please contact support immediately.</p>
     </div>
@@ -230,7 +232,7 @@ const sendAdminWelcomeEmail = async (email, username, password) => {
       </div>
       <p>Please log in and change your password immediately if a temporary one was provided.</p>
       <div style="text-align: center; margin: 30px 0;">
-        <a href="https://secure-voting-system-frontend.vercel.app/admin-login" style="background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Login to Dashboard</a>
+        <a href="${FRONTEND_URL}/admin-login" style="background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Login to Dashboard</a>
       </div>
       <p>Best regards,<br>Secure Voting System</p>
     </div>
@@ -252,7 +254,7 @@ const sendVoteConfirmationEmail = async (voterEmail, voterName, electionName) =>
 
       <p>Results will be available on the portal once the election concludes.</p>
       <div style="text-align: center; margin: 30px 0;">
-          <a href="https://secure-voting-system-frontend.vercel.app/voter-login" style="background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Return to Portal</a>
+          <a href="${FRONTEND_URL}/voter-login" style="background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Return to Portal</a>
       </div>
       <p>Best regards,<br>Secure Voting System</p>
     </div>
