@@ -129,8 +129,15 @@ function CastVote() {
 
     return (
         <div className="min-h-screen bg-slate-900 text-white p-8">
-            <div className="max-w-4xl mx-auto">
-                <h1 className="text-3xl font-bold mb-8 text-center text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Cast Your Vote</h1>
+            <div className="max-w-4xl mx-auto relative">
+                <button
+                    onClick={() => navigate('/voter-dashboard')}
+                    className="absolute left-0 top-1 text-slate-400 hover:text-white flex items-center gap-2 transition-colors mb-4 md:mb-0"
+                >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                    <span>Back</span>
+                </button>
+                <h1 className="text-3xl font-bold mb-8 text-center text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mt-8 md:mt-0">Cast Your Vote</h1>
 
                 <div className="bg-slate-800/80 p-8 rounded-2xl border border-white/10 shadow-2xl">
                     <h3 className="text-2xl font-bold mb-6 text-center text-white">Select a Candidate</h3>
