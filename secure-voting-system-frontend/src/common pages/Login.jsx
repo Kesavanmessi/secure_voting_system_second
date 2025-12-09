@@ -40,7 +40,17 @@ const Login = ({ login }) => {
   const [resetStep, setResetStep] = useState(1); // 1: Email, 2: OTP & New Password
 
   const navigate = useNavigate();
-  const { loginAdmin, loginVoter } = useContext(AuthContext);
+  const { loginAdmin, loginVoter, voter, loading } = useContext(AuthContext); // Destructured voter and loading
+
+  // Session Persistence Check
+  useEffect(() => {
+    // If we are in "Voter Login" mode (login prop is undefined/null/not 'Admin')
+    // And we have a voter in context (loaded from localStorage by AuthContext)
+    // Then redirect immediately.
+    if (login !== 'Admin' && !loading && voter) {
+      navigate('/voter-dashboard');
+    }
+  }, [login, loading, voter, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();

@@ -138,9 +138,76 @@ const startScheduler = () => {
       });
 
       for (const election of electionsJustEnded) {
-        console.log(`Election "${election.electionName}" just ended, sending notifications...`);
+        console.log(`Election "${election.electionName}" just ended, processing results...`);
 
-        // Send election end notification emails
+        // 1. Calculate Results
+        const electionCandidates = await ElectionCandidates.findOne({ electionId: election._id });
+        const electionVoters = await ElectionVoters.findOne({ electionId: election._id });
+
+        let winnerName = 'Winner Not Available';
+        let isTie = false;
+        let winner = null;
+
+        if (electionCandidates && electionCandidates.candidates) {
+          // Decrypt votes
+          const results = electionCandidates.candidates.map(c => ({
+            candidateId: c.candidateId,
+            voteCount: decryptVoteCount(c.voteCount)
+          }));
+
+          // Filter out NOTA for winner calculation if desired, or treat as regular candidate. 
+          // Usually NOTA isn't a "winner" in the celebratory sense, but let's stick to simple max votes logic.
+
+          // Find max votes
+          const maxVotes = Math.max(...results.map(r => r.voteCount));
+
+          // Find candidates with max votes
+          const topCandidates = results.filter(r => r.voteCount === maxVotes);
+
+          if (topCandidates.length > 0) {
+            // Handle Tie: Randomly select one
+            let winningCandidateId = topCandidates[0].candidateId;
+            if (topCandidates.length > 1) {
+              isTie = true;
+              const randomIndex = Math.floor(Math.random() * topCandidates.length);
+              winningCandidateId = topCandidates[randomIndex].candidateId;
+            }
+
+            // Fetch candidate details to get the name
+            // We need to look up the candidate name from the Candidate collection 
+            // However, ElectionCandidates only has IDs. We need to iterate through the election's candidate lists.
+
+            const candidateLists = election.candidateLists || [];
+            // We likely need to fetch all candidate lists to find the name
+            const candidateListsDocs = await Candidate.find({ listname: { $in: candidateLists } });
+
+            // Create a map for quick lookup
+            const candidateMap = new Map();
+            candidateListsDocs.forEach(list => {
+              list.candidates.forEach(c => candidateMap.set(c.candidateId, c));
+            });
+            // Add NOTA manually if needed, though usually it has a fixed name
+            candidateMap.set('C1NOTA2', { candidateName: 'NOTA (None of the Above)', name: 'NOTA' });
+
+            const winnerDetails = candidateMap.get(winningCandidateId);
+
+            if (winnerDetails) {
+              winner = winnerDetails;
+              winnerName = winnerDetails.candidateName || winnerDetails.name || 'Unknown Candidate';
+            }
+          }
+        }
+
+        // 2. Update Election Document (Persist Result)
+        // Also mark result as published automatically so users can see it immediately
+        election.winner = winner;
+        election.isTie = isTie;
+        election.isResultPublished = true;
+        await election.save();
+
+        console.log(`Election processed. Winner: ${winnerName} (Tie: ${isTie})`);
+
+        // 3. Send Notifications
         const voterLists = election.voterLists || [];
         const voterListPromises = voterLists.map(listName => Voter.findOne({ listname: listName }));
         const voterListsData = await Promise.all(voterListPromises);
@@ -151,8 +218,10 @@ const startScheduler = () => {
               await sendElectionEndEmail(
                 voter.email,
                 voter.voterName,
-                election.electionName
-              );
+                election.electionName,
+                winnerName,
+                isTie
+              ).catch(err => console.error(`Failed to send end email to ${voter.email}:`, err));
             }
           }
         }
